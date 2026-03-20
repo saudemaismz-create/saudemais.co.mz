@@ -1,0 +1,174 @@
+{
+  "entities": {
+    "Pharmacy": {
+      "title": "Pharmacy",
+      "description": "A pharmacy registered in the system.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the pharmacy." },
+        "address": { "type": "string", "description": "The physical address." },
+        "phone": { "type": "string", "description": "Contact phone number." },
+        "image": { "type": "string", "description": "URL of the pharmacy image." },
+        "rating": { "type": "number", "description": "Average rating." },
+        "reviewCount": { "type": "number", "description": "Total number of reviews." },
+        "isOpen": { "type": "boolean", "description": "Current status." },
+        "ownerUid": { "type": "string", "description": "The UID of the user who owns this pharmacy." },
+        "status": { "type": "string", "enum": ["pending", "active", "suspended"], "description": "Approval status." },
+        "planId": { "type": "string", "enum": ["basic", "pro", "premium"], "description": "Subscription plan." },
+        "commissionRate": { "type": "number", "description": "Commission percentage (e.g. 0.10)." },
+        "joinedAt": { "type": "string", "format": "date-time" },
+        "featured": { "type": "boolean", "description": "Whether the pharmacy is featured on homepage." }
+      },
+      "required": ["name", "address", "ownerUid", "status", "planId"]
+    },
+    "Medication": {
+      "title": "Medication",
+      "description": "A medication product available in the marketplace.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Product name." },
+        "description": { "type": "string", "description": "Product description." },
+        "category": { "type": "string", "description": "Category (e.g., Antibiotics)." },
+        "price": { "type": "number", "description": "Price in MT." },
+        "requiresPrescription": { "type": "boolean", "description": "If it needs a prescription." },
+        "image": { "type": "string", "description": "Product image URL." },
+        "stock": { "type": "number", "description": "Current stock count." },
+        "expiryDate": { "type": "string", "description": "Expiry date (YYYY-MM-DD)." },
+        "pharmacyId": { "type": "string", "description": "The ID of the pharmacy that owns this product." },
+        "isSponsored": { "type": "boolean", "description": "Whether the product is sponsored." },
+        "sponsoredUntil": { "type": "string", "format": "date-time" },
+        "rating": { "type": "number" },
+        "reviewCount": { "type": "number" }
+      },
+      "required": ["name", "price", "pharmacyId"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A customer order for medications.",
+      "type": "object",
+      "properties": {
+        "customerName": { "type": "string", "description": "Name of the customer." },
+        "customerUid": { "type": "string", "description": "UID of the customer." },
+        "items": { "type": "array", "description": "List of items ordered." },
+        "total": { "type": "number", "description": "Total order value." },
+        "commissionAmount": { "type": "number", "description": "Platform commission." },
+        "netAmount": { "type": "number", "description": "Amount for the pharmacy." },
+        "status": { "type": "string", "enum": ["Pendente", "Em Processamento", "Em Trânsito", "Entregue", "Cancelado"], "description": "Order status." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Order creation timestamp." },
+        "address": { "type": "string", "description": "Delivery address." },
+        "phone": { "type": "string", "description": "Contact phone." },
+        "paymentMethod": { "type": "string", "enum": ["mpesa", "emola", "card"], "description": "Payment method used." },
+        "pharmacyIds": { "type": "array", "items": { "type": "string" }, "description": "IDs of pharmacies involved." }
+      },
+      "required": ["customerUid", "items", "total", "status", "address", "phone", "paymentMethod"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile information.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["customer", "pharmacy_owner", "admin"] },
+        "pharmacyId": { "type": "string", "description": "ID of the pharmacy if the user is an owner." },
+        "phone": { "type": "string" },
+        "address": { "type": "string" }
+      },
+      "required": ["email", "role"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Customer review for a pharmacy or product.",
+      "type": "object",
+      "properties": {
+        "targetId": { "type": "string" },
+        "targetType": { "type": "string", "enum": ["pharmacy", "medication"] },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["targetId", "targetType", "userId", "rating"]
+    },
+    "AdCampaign": {
+      "title": "AdCampaign",
+      "description": "Internal advertising campaign.",
+      "type": "object",
+      "properties": {
+        "pharmacyId": { "type": "string" },
+        "type": { "type": "string", "enum": ["banner_home", "banner_category", "product_highlight"] },
+        "status": { "type": "string", "enum": ["active", "paused", "expired"] },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" },
+        "imageUrl": { "type": "string" },
+        "medicationId": { "type": "string" },
+        "cost": { "type": "number" }
+      },
+      "required": ["pharmacyId", "type", "status", "cost"]
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "Discount coupon.",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "discountType": { "type": "string", "enum": ["percentage", "fixed"] },
+        "discountValue": { "type": "number" },
+        "minOrderValue": { "type": "number" },
+        "expiryDate": { "type": "string", "format": "date-time" },
+        "usageLimit": { "type": "number" },
+        "currentUsage": { "type": "number" },
+        "pharmacyId": { "type": "string" }
+      },
+      "required": ["code", "discountType", "discountValue", "expiryDate"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global platform settings.",
+      "type": "object",
+      "properties": {
+        "commissionRate": { "type": "number" },
+        "featuredPharmacyFee": { "type": "number" },
+        "sponsoredProductFee": { "type": "number" },
+        "maintenanceMode": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["commissionRate", "featuredPharmacyFee", "sponsoredProductFee"]
+    }
+  },
+  "firestore": {
+    "/pharmacies/{pharmacyId}": {
+      "schema": "Pharmacy",
+      "description": "Collection of pharmacies."
+    },
+    "/medications/{medicationId}": {
+      "schema": "Medication",
+      "description": "Global collection of medications."
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Collection of orders."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles."
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "User reviews."
+    },
+    "/ads/{adId}": {
+      "schema": "AdCampaign",
+      "description": "Ad campaigns."
+    },
+    "/coupons/{couponId}": {
+      "schema": "Coupon",
+      "description": "Discount coupons."
+    },
+    "/settings/{settingId}": {
+      "schema": "Settings",
+      "description": "Global settings."
+    }
+  }
+}

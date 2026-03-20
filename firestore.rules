@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (('email' in request.auth.token && request.auth.token.email.matches("(?i).*caneabacarhimiacane.*")) ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+    }
+
+    function isPharmacyOwner(pharmacyId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/pharmacies/$(pharmacyId)) &&
+        get(/databases/$(database)/documents/pharmacies/$(pharmacyId)).data.ownerUid == request.auth.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'name', 'email', 'role', 'pharmacyId', 'bloodType', 'weight', 'height', 'lastCheckup', 'phone', 'address', 'photoURL', 'location']) &&
+             isValidEmail(data.email) &&
+             (!('role' in data) || data.role in ['customer', 'pharmacy_owner', 'admin']);
+    }
+
+    function isValidPharmacy(data) {
+      return hasOnlyAllowedFields(['name', 'type', 'address', 'phone', 'image', 'rating', 'reviewCount', 'isOpen', 'ownerUid', 'status', 'planId', 'commissionRate', 'joinedAt', 'featured']) &&
+             data.name is string && data.name.size() > 0 &&
+             data.address is string &&
+             data.ownerUid is string &&
+             (!('status' in data) || data.status in ['pending', 'active', 'suspended']) &&
+             (!('planId' in data) || data.planId in ['basic', 'pro', 'premium']);
+    }
+
+    function isValidMedication(data) {
+      return hasOnlyAllowedFields(['name', 'description', 'category', 'price', 'requiresPrescription', 'image', 'stock', 'expiryDate', 'pharmacyId', 'isSponsored', 'sponsoredUntil', 'rating', 'reviewCount', 'availableAt', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 &&
+             data.price is number &&
+             data.pharmacyId is string;
+    }
+
+    function isValidOrder(data) {
+      return hasOnlyAllowedFields(['customerName', 'customerUid', 'items', 'total', 'commissionAmount', 'netAmount', 'status', 'createdAt', 'address', 'phone', 'paymentMethod', 'pharmacyIds']) &&
+             data.customerUid is string &&
+             data.items is list &&
+             data.total is number &&
+             data.status in ['Pendente', 'Em Processamento', 'Em Trânsito', 'Entregue', 'Cancelado'] &&
+             data.paymentMethod in ['mpesa', 'emola', 'card'];
+    }
+
+    function isValidReview(data) {
+      return hasOnlyAllowedFields(['targetId', 'targetType', 'userId', 'userName', 'rating', 'comment', 'createdAt']) &&
+             data.targetType in ['pharmacy', 'medication'] &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5;
+    }
+
+    function isValidAd(data) {
+      return hasOnlyAllowedFields(['pharmacyId', 'type', 'status', 'startDate', 'endDate', 'imageUrl', 'medicationId', 'cost', 'targetUrl']) &&
+             data.type in ['banner_home', 'banner_category', 'product_highlight'] &&
+             data.status in ['active', 'paused', 'expired'];
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    match /pharmacies/{pharmacyId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if isAuthenticated() && (isAdmin() || resource.data.ownerUid == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    match /medications/{medicationId} {
+      allow read: if true;
+      allow create: if isPharmacyOwner(request.resource.data.pharmacyId) && isValidMedication(request.resource.data);
+      allow update: if (isPharmacyOwner(resource.data.pharmacyId) && isValidMedication(request.resource.data)) || isAdmin();
+      allow delete: if isPharmacyOwner(resource.data.pharmacyId) || isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.customerUid == request.auth.uid;
+      allow update: if isAuthenticated();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidReview(request.resource.data) && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || (isOwner(resource.data.userId) && isValidReview(request.resource.data));
+      allow delete: if isAdmin() || isOwner(resource.data.userId);
+    }
+
+    match /ads/{adId} {
+      allow read: if true;
+      allow create: if isPharmacyOwner(request.resource.data.pharmacyId) && isValidAd(request.resource.data);
+      allow update: if isAdmin() || (isPharmacyOwner(resource.data.pharmacyId) && isValidAd(request.resource.data));
+      allow delete: if isAdmin();
+    }
+
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow create: if isAdmin() || (isAuthenticated() && request.resource.data.pharmacyId != null && isPharmacyOwner(request.resource.data.pharmacyId));
+      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.pharmacyId != null && isPharmacyOwner(resource.data.pharmacyId));
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Saúde Mais",
+  "description": "A maior plataforma digital de saúde. Conectamos pacientes a farmácias, médicos e diagnósticos inteligentes, agora acessível em saudemais.co.mz.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera",
+    "microphone"
+  ]
+}
