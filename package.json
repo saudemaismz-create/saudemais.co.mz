@@ -12,6 +12,7 @@
   "dependencies": {
     "@google/genai": "^1.46.0",
     "@tailwindcss/vite": "^4.2.1",
+    "@vercel/speed-insights": "^2.0.0",
     "firebase": "^12.10.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.562.0",

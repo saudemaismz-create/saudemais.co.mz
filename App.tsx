@@ -1,6 +1,7 @@
 
 import React, { Suspense, lazy } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import Layout from './components/Layout';
 import { FirebaseProvider, useFirebase } from './components/FirebaseProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -76,6 +77,7 @@ const App: React.FC = () => {
           </Router>
         </CartProvider>
       </FirebaseProvider>
+      <SpeedInsights />
     </ErrorBoundary>
   );
 };
