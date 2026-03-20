@@ -15,6 +15,7 @@ import { db } from '../firebase';
 import { useFirebase } from './FirebaseProvider';
 import { Pharmacy, Order, UserProfile, PharmacyPlan } from '../types';
 import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHandler';
+import { useErrorBoundary } from 'react-error-boundary';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, 
   Tooltip, ResponsiveContainer, Cell, PieChart, Pie
@@ -22,6 +23,7 @@ import {
 
 const AdminDashboard: React.FC = () => {
   const { user, profile, isAuthReady } = useFirebase();
+  const { showBoundary } = useErrorBoundary();
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -53,25 +55,41 @@ const AdminDashboard: React.FC = () => {
     const unsubPharmacies = onSnapshot(collection(db, 'pharmacies'), (snap) => {
       setPharmacies(snap.docs.map(d => ({ id: d.id, ...d.data() } as Pharmacy)));
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'pharmacies');
+      try {
+        handleFirestoreError(error, OperationType.LIST, 'pharmacies');
+      } catch (err) {
+        showBoundary(err);
+      }
     });
 
     const unsubOrders = onSnapshot(query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(50)), (snap) => {
       setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order)));
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'orders');
+      try {
+        handleFirestoreError(error, OperationType.LIST, 'orders');
+      } catch (err) {
+        showBoundary(err);
+      }
     });
 
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
       setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() } as any as UserProfile)));
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'users');
+      try {
+        handleFirestoreError(error, OperationType.LIST, 'users');
+      } catch (err) {
+        showBoundary(err);
+      }
     });
 
     const unsubAds = onSnapshot(collection(db, 'ads'), (snap) => {
       setAds(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'ads');
+      try {
+        handleFirestoreError(error, OperationType.LIST, 'ads');
+      } catch (err) {
+        showBoundary(err);
+      }
     });
 
     const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
@@ -79,7 +97,11 @@ const AdminDashboard: React.FC = () => {
         setSettings(snapshot.data() as any);
       }
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'settings/global');
+      try {
+        handleFirestoreError(error, OperationType.GET, 'settings/global');
+      } catch (err) {
+        showBoundary(err);
+      }
     });
 
     setLoading(false);

@@ -9,6 +9,7 @@ import { db } from '../firebase';
 import { Pharmacy, Medication, Order } from '../types';
 import { useFirebase } from './FirebaseProvider';
 import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHandler';
+import { useErrorBoundary } from 'react-error-boundary';
 
 const activityData = [
   { name: 'Seg', val: 65 }, { name: 'Ter', val: 72 }, { name: 'Qua', val: 68 },
@@ -18,6 +19,7 @@ const activityData = [
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { profile, user } = useFirebase();
+  const { showBoundary } = useErrorBoundary();
   const [news, setNews] = useState<{text: string, links: any[]}>({ text: 'Carregando notícias...', links: [] });
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
@@ -125,26 +127,42 @@ const Dashboard: React.FC = () => {
           setActiveOrder(null);
         }
       }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'orders');
+        try {
+          handleFirestoreError(error, OperationType.LIST, 'orders');
+        } catch (err) {
+          showBoundary(err);
+        }
       });
     }
 
-    // Fetch Pharmacies
-    const qPharmacies = query(collection(db, 'pharmacies'), orderBy('featured', 'desc'), limit(3));
+    // Fetch Pharmacies - Simplified to rule out index issues
+    const qPharmacies = query(collection(db, 'pharmacies'), limit(10));
     const unsubscribePharmacies = onSnapshot(qPharmacies, (snapshot) => {
       const pData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Pharmacy));
-      setPharmacies(pData);
+      // Sort in memory if needed
+      const sorted = [...pData].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+      setPharmacies(sorted.slice(0, 3));
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'pharmacies');
+      try {
+        handleFirestoreError(error, OperationType.LIST, 'pharmacies');
+      } catch (err) {
+        showBoundary(err);
+      }
     });
 
-    // Fetch Medications
-    const qMedications = query(collection(db, 'medications'), orderBy('isSponsored', 'desc'), limit(8));
+    // Fetch Medications - Simplified to rule out index issues
+    const qMedications = query(collection(db, 'medications'), limit(20));
     const unsubscribeMedications = onSnapshot(qMedications, (snapshot) => {
       const mData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Medication));
-      setMedications(mData);
+      // Sort in memory if needed
+      const sorted = [...mData].sort((a, b) => (b.isSponsored ? 1 : 0) - (a.isSponsored ? 1 : 0));
+      setMedications(sorted.slice(0, 8));
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'medications');
+      try {
+        handleFirestoreError(error, OperationType.LIST, 'medications');
+      } catch (err) {
+        showBoundary(err);
+      }
     });
 
     return () => {

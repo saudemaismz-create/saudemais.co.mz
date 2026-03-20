@@ -22,6 +22,7 @@ import { db, auth, googleProvider } from '../firebase';
 import { signInWithPopup } from 'firebase/auth';
 import { useFirebase } from './FirebaseProvider';
 import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHandler';
+import { useErrorBoundary } from 'react-error-boundary';
 import { GoogleGenAI } from "@google/genai";
 
 const SALES_DATA = [
@@ -37,6 +38,7 @@ const SALES_DATA = [
 const StoreDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, profile, isAuthReady } = useFirebase();
+  const { showBoundary } = useErrorBoundary();
   const [myPharmacy, setMyPharmacy] = useState<Pharmacy | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'inventory' | 'orders' | 'finances' | 'plans' | 'ads'>('overview');
   const [inventory, setInventory] = useState<Medication[]>([]);
@@ -107,7 +109,11 @@ const StoreDashboard: React.FC = () => {
           const meds = invSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Medication));
           setInventory(meds);
         }, (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'medications');
+          try {
+            handleFirestoreError(error, OperationType.LIST, 'medications');
+          } catch (err) {
+            showBoundary(err);
+          }
         });
 
         // Fetch Orders
@@ -116,7 +122,11 @@ const StoreDashboard: React.FC = () => {
           const ords = orderSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
           setOrders(ords);
         }, (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'orders');
+          try {
+            handleFirestoreError(error, OperationType.LIST, 'orders');
+          } catch (err) {
+            showBoundary(err);
+          }
         });
 
         // Fetch Ads
@@ -125,7 +135,11 @@ const StoreDashboard: React.FC = () => {
           const ads = adSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AdCampaign));
           setAdCampaigns(ads);
         }, (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'ads');
+          try {
+            handleFirestoreError(error, OperationType.LIST, 'ads');
+          } catch (err) {
+            showBoundary(err);
+          }
         });
 
         setLoading(false);
@@ -139,7 +153,11 @@ const StoreDashboard: React.FC = () => {
         setLoading(false);
       }
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'pharmacies');
+      try {
+        handleFirestoreError(error, OperationType.LIST, 'pharmacies');
+      } catch (err) {
+        showBoundary(err);
+      }
     });
 
     return () => unsubscribePharmacy();
