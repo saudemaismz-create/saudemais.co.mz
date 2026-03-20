@@ -107,16 +107,20 @@ const Dashboard: React.FC = () => {
     // Fetch Active Order for the user
     let unsubscribeOrder = () => {};
     if (user) {
+      // Simplified query to avoid composite index requirement
       const qOrder = query(
         collection(db, 'orders'),
         where('customerUid', '==', user.uid),
-        where('status', 'in', ['Pendente', 'Em Processamento', 'Em Trânsito']),
         orderBy('createdAt', 'desc'),
-        limit(1)
+        limit(5)
       );
       unsubscribeOrder = onSnapshot(qOrder, (snapshot) => {
-        if (!snapshot.empty) {
-          setActiveOrder({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Order);
+        const activeOrders = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as Order))
+          .filter(order => ['Pendente', 'Em Processamento', 'Em Trânsito'].includes(order.status));
+        
+        if (activeOrders.length > 0) {
+          setActiveOrder(activeOrders[0]);
         } else {
           setActiveOrder(null);
         }

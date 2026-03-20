@@ -4,6 +4,7 @@ import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { UserProfile } from '../types';
 import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHandler';
+import { useErrorBoundary } from 'react-error-boundary';
 
 interface FirebaseContextType {
   user: User | null;
@@ -26,6 +27,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const { showBoundary } = useErrorBoundary();
 
   useEffect(() => {
     let profileUnsubscribe: (() => void) | null = null;
@@ -37,48 +39,64 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const profileRef = doc(db, 'users', firebaseUser.uid);
           
           profileUnsubscribe = onSnapshot(profileRef, async (profileSnap) => {
-            if (profileSnap.exists()) {
-              const data = profileSnap.data() as UserProfile;
-              const isAdminEmail = firebaseUser.email?.toLowerCase().includes('caneabacarhimiacane');
-              
-              // Detect location
-              navigator.geolocation.getCurrentPosition(async (position) => {
-                const location = {
-                  lat: position.coords.latitude,
-                  lng: position.coords.longitude
-                };
-                if (JSON.stringify(data.location) !== JSON.stringify(location)) {
-                  await setDoc(profileRef, { location }, { merge: true });
-                }
-              }, (error) => {
-                console.error("Error getting location:", error);
-              });
+            try {
+              if (profileSnap.exists()) {
+                const data = profileSnap.data() as UserProfile;
+                const isAdminEmail = firebaseUser.email?.toLowerCase().includes('caneabacarhimiacane');
+                
+                // Detect location
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                  try {
+                    const location = {
+                      lat: position.coords.latitude,
+                      lng: position.coords.longitude
+                    };
+                    if (JSON.stringify(data.location) !== JSON.stringify(location)) {
+                      await setDoc(profileRef, { location }, { merge: true });
+                    }
+                  } catch (err) {
+                    console.error("Error updating location:", err);
+                  }
+                }, (error) => {
+                  console.error("Error getting location:", error);
+                });
 
-              if (isAdminEmail && data.role !== 'admin') {
-                const updatedProfile = { ...data, role: 'admin' as const };
-                setProfile(updatedProfile); // Set immediately for faster UI update
-                await setDoc(profileRef, { role: 'admin' }, { merge: true });
+                if (isAdminEmail && data.role !== 'admin') {
+                  const updatedProfile = { ...data, role: 'admin' as const };
+                  setProfile(updatedProfile); // Set immediately for faster UI update
+                  await setDoc(profileRef, { role: 'admin' }, { merge: true });
+                } else {
+                  setProfile(data);
+                }
               } else {
-                setProfile(data);
+                // Create default profile
+                const isAdminEmail = firebaseUser.email?.toLowerCase().includes('caneabacarhimiacane');
+                
+                const newProfile: UserProfile = {
+                  uid: firebaseUser.uid,
+                  name: firebaseUser.displayName || 'Usuário',
+                  email: firebaseUser.email || '',
+                  role: isAdminEmail ? 'admin' : 'customer'
+                };
+                setProfile(newProfile); // Set immediately to avoid waiting for snapshot
+                await setDoc(profileRef, newProfile);
               }
-            } else {
-              // Create default profile
-              const isAdminEmail = firebaseUser.email?.toLowerCase().includes('caneabacarhimiacane');
-              
-              const newProfile: UserProfile = {
-                uid: firebaseUser.uid,
-                name: firebaseUser.displayName || 'Usuário',
-                email: firebaseUser.email || '',
-                role: isAdminEmail ? 'admin' : 'customer'
-              };
-              setProfile(newProfile); // Set immediately to avoid waiting for snapshot
-              await setDoc(profileRef, newProfile);
+            } catch (err) {
+              showBoundary(err);
             }
           }, (error) => {
-            handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+            try {
+              handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+            } catch (err) {
+              showBoundary(err);
+            }
           });
         } catch (error) {
-          handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+          try {
+            handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+          } catch (err) {
+            showBoundary(err);
+          }
         }
       } else {
         if (profileUnsubscribe) {
@@ -97,7 +115,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         profileUnsubscribe();
       }
     };
-  }, []);
+  }, [showBoundary]);
 
   return (
     <FirebaseContext.Provider value={{ user, profile, loading, isAuthReady }}>

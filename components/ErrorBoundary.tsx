@@ -12,8 +12,14 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, resetErrorBoundary
   try {
     if (error?.message) {
       const parsedError = JSON.parse(error.message);
-      if (parsedError.error && parsedError.error.includes('Missing or insufficient permissions')) {
-        errorMessage = 'Erro de Permissão: Não tem autorização para realizar esta ação ou aceder a estes dados.';
+      if (parsedError.error) {
+        if (parsedError.error.includes('Missing or insufficient permissions')) {
+          errorMessage = 'Erro de Permissão: Não tem autorização para realizar esta ação ou aceder a estes dados.';
+        } else if (parsedError.error.includes('The query requires an index')) {
+          errorMessage = 'Erro de Índice: Esta consulta requer um índice no Firestore. Por favor, verifique a consola do Firebase.';
+        } else {
+          errorMessage = `Erro de Dados: ${parsedError.error}`;
+        }
       }
     }
   } catch (e) {
