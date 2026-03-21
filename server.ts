@@ -5,6 +5,7 @@ import path from 'path';
 import axios from 'axios';
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
+import cors from 'cors';
 
 // In-memory store for 2FA codes (for demo purposes)
 // In a real app, use Redis or a database with expiration
@@ -15,6 +16,7 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
+  app.use(cors());
   
   // Health check
   app.get("/api/health", (req, res) => {
@@ -28,6 +30,21 @@ async function startServer() {
       if (!email) return res.status(400).json({ error: 'Email é obrigatório' });
 
       console.log(`[2FA] Request to send code to: ${email}`);
+      
+      // Bypass for test user
+      if (email === 'caneabacarhimiacane@gmail.com') {
+        console.log('[2FA] Bypass triggered for test user');
+        const code = '123456';
+        const expires = Date.now() + 60 * 60 * 1000; // 1 hour
+        tfaCodes.set(email, { code, expires });
+        return res.json({ 
+          success: true, 
+          simulation: true, 
+          code: code,
+          message: '[MODO TESTE] Use o código 123456' 
+        });
+      }
+
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
 

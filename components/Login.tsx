@@ -188,8 +188,14 @@ const Login: React.FC = () => {
         });
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          const errorMessage = errorData.error || 'Falha ao enviar código de verificação.';
+          let errorMessage = 'Falha ao enviar código de verificação.';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch (e) {
+            const text = await response.text();
+            errorMessage = `Erro do Servidor (${response.status}): ${text.slice(0, 100) || 'Sem resposta'}`;
+          }
           setError(errorMessage);
           throw new Error(errorMessage);
         }
