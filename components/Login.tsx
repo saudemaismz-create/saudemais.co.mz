@@ -36,12 +36,36 @@ const Login: React.FC = () => {
   const [simulatedCode, setSimulatedCode] = useState('');
 
   useEffect(() => {
-    // If user is already logged in and 2FA is verified (or not required yet)
     const is2FAVerified = sessionStorage.getItem('2fa_verified') === 'true';
-    if (isAuthReady && user && is2FAVerified) {
-      navigate('/app');
+    if (isAuthReady && user) {
+      if (is2FAVerified) {
+        navigate('/app');
+      } else if (!showEmail2FA && !mfaResolver) {
+        // If logged in but not verified, and not already showing 2FA, trigger it
+        const trigger2FA = async () => {
+          try {
+            const response = await fetch('/api/auth/send-2fa', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: user.email })
+            });
+            if (response.ok) {
+              const data = await response.json();
+              setIsSimulation(!!data.simulation);
+              if (data.simulation && data.code) {
+                setSimulatedCode(data.code);
+              }
+              setEmail(user.email || '');
+              setShowEmail2FA(true);
+            }
+          } catch (err) {
+            console.error("Auto-trigger 2FA error:", err);
+          }
+        };
+        trigger2FA();
+      }
     }
-  }, [user, isAuthReady, navigate]);
+  }, [user, isAuthReady, navigate, showEmail2FA, mfaResolver]);
 
   if (!isAuthReady) {
     return (

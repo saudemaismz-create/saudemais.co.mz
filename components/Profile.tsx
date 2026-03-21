@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { User, Shield, Bell, History, LogOut, ChevronRight, Activity, Droplets, Ruler, Weight, LogIn, Package, Clock, CheckCircle2, AlertCircle, Truck, Calendar } from 'lucide-react';
+import { User, Shield, Bell, History, LogOut, ChevronRight, Activity, Droplets, Ruler, Weight, LogIn, Package, Clock, CheckCircle2, AlertCircle, Truck, Calendar, ShoppingBag } from 'lucide-react';
 import { useFirebase } from './FirebaseProvider';
 import { auth, googleProvider, db } from '../firebase';
 import { signInWithPopup, signOut } from 'firebase/auth';
@@ -82,6 +82,7 @@ const Profile: React.FC = () => {
 
   const handleLogout = async () => {
     try {
+      sessionStorage.removeItem('2fa_verified');
       await signOut(auth);
     } catch (error) {
       console.error("Logout error:", error);
