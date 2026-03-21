@@ -18,13 +18,21 @@ async function startServer() {
   app.use(express.json());
   app.use(cors());
   
+  // Request logger
+  app.use((req, res, next) => {
+    console.log(`[SERVER] ${req.method} ${req.url}`);
+    next();
+  });
+
+  const apiRouter = express.Router();
+
   // Health check
-  app.get("/api/health", (req, res) => {
+  apiRouter.get("/health", (req, res) => {
     res.json({ status: "ok" });
   });
 
   // 2FA: Send Code
-  app.post('/api/auth/send-2fa', async (req, res) => {
+  apiRouter.post(['/auth/send-2fa', '/auth/send-2fa/'], async (req, res) => {
     try {
       const { email } = req.body;
       if (!email) return res.status(400).json({ error: 'Email é obrigatório' });
@@ -144,7 +152,7 @@ async function startServer() {
   });
 
   // 2FA: Verify Code
-  app.post('/api/auth/verify-2fa', (req, res) => {
+  apiRouter.post(['/auth/verify-2fa', '/auth/verify-2fa/'], (req, res) => {
     const { email, code } = req.body;
     if (!email || !code) return res.status(400).json({ error: 'Email e código são obrigatórios' });
 
@@ -165,7 +173,7 @@ async function startServer() {
   });
 
   // Payment Status check
-  app.get("/api/payment/status", (req, res) => {
+  apiRouter.get("/payment/status", (req, res) => {
     const hasToken = !!process.env.PAYMENT_GATEWAY_TOKEN;
     res.json({ 
       configured: hasToken,
@@ -175,7 +183,7 @@ async function startServer() {
   });
 
   // Payment API Route
-  app.post('/api/payment/initiate', async (req, res) => {
+  apiRouter.post('/payment/initiate', async (req, res) => {
     const { amount, phone, provider, orderId } = req.body;
     const apiKey = process.env.PAYMENT_GATEWAY_TOKEN;
 
@@ -229,6 +237,17 @@ async function startServer() {
         error: errorData?.message || 'Falha ao comunicar com o gateway de pagamento. Verifique o número e tente novamente.'
       });
     }
+  });
+
+  // Mount API Router
+  app.use('/api', apiRouter);
+
+  // Catch-all for /api that returns JSON instead of falling through to Vite
+  app.all('/api/*', (req, res) => {
+    res.status(404).json({ 
+      error: `API route not found: ${req.method} ${req.url}`,
+      suggestion: "Check if the route is correctly defined in server.ts"
+    });
   });
 
   // Vite middleware for development

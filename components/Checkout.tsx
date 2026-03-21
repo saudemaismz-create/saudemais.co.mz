@@ -25,6 +25,8 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Order } from '../types';
 import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHandler';
 
+import { fetchJSON } from '../utils/api';
+
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const { items, total, removeItem, updateQuantity, clearCart } = useCart();
@@ -60,14 +62,25 @@ const Checkout: React.FC = () => {
       return;
     }
 
+    if (formData.phone.length < 9) {
+      setError('Por favor, insira um número de telefone válido para o pagamento.');
+      return;
+    }
+
+    if (formData.address.length < 5) {
+      setError('Por favor, insira um endereço de entrega completo.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setIsProcessingPayment(true);
     setPaymentStatus('waiting');
 
     try {
+      console.log('[Checkout] Initiating payment for order:', total);
       // 1. Initiate Payment via Server
-      const paymentResponse = await fetch('/api/payment/initiate', {
+      const paymentData = await fetchJSON('/api/payment/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -78,22 +91,15 @@ const Checkout: React.FC = () => {
         })
       });
 
-      if (!paymentResponse.ok) {
-        throw new Error('Falha ao iniciar o pagamento.');
-      }
-
-      const paymentData = await paymentResponse.json();
-      
-      if (!paymentData.success) {
-        throw new Error(paymentData.error || 'Erro no pagamento.');
-      }
+      console.log('[Checkout] Payment initiated:', paymentData);
 
       // 2. Simulate waiting for USSD confirmation (C2B flow)
       // In a real app, you would poll the status or wait for a webhook
       await new Promise(resolve => setTimeout(resolve, 4500));
 
+      console.log('[Checkout] Creating order in Firestore...');
       const orderData: Omit<Order, 'id'> = {
-        customerName: profile.name,
+        customerName: profile?.name || user.displayName || 'Cliente',
         customerUid: user.uid,
         items: items,
         total: total,
@@ -101,11 +107,12 @@ const Checkout: React.FC = () => {
         createdAt: serverTimestamp(),
         address: formData.address,
         phone: formData.phone,
-        paymentMethod: formData.paymentMethod,
+        paymentMethod: formData.paymentMethod as any,
         pharmacyIds: Array.from(new Set(items.map(i => i.pharmacyId).filter(Boolean))) as string[]
       };
 
       const docRef = await addDoc(collection(db, 'orders'), orderData);
+      console.log('[Checkout] Order created with ID:', docRef.id);
       setOrderId(docRef.id);
       
       setPaymentStatus('success');
@@ -116,8 +123,22 @@ const Checkout: React.FC = () => {
       clearCart();
     } catch (err) {
       setPaymentStatus('error');
+      console.error('[Checkout] Error processing order:', err);
+      if (err instanceof Error) {
+        try {
+          const parsedError = JSON.parse(err.message);
+          if (parsedError.error && parsedError.error.includes('insufficient permissions')) {
+            setError('Erro de permissão no Firestore. Verifique as regras de segurança.');
+          } else {
+            setError(`Erro: ${parsedError.error || err.message}`);
+          }
+        } catch {
+          setError(`Erro: ${err.message}`);
+        }
+      } else {
+        setError('Ocorreu um erro ao processar seu pedido. Tente novamente.');
+      }
       handleFirestoreError(err, OperationType.WRITE, 'orders');
-      setError('Ocorreu um erro ao processar seu pedido. Tente novamente.');
     } finally {
       setLoading(false);
       setIsProcessingPayment(false);

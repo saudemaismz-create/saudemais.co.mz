@@ -13,6 +13,8 @@ declare global {
   }
 }
 
+import { fetchJSON } from '../utils/api';
+
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthReady } = useFirebase();
@@ -44,22 +46,22 @@ const Login: React.FC = () => {
         // If logged in but not verified, and not already showing 2FA, trigger it
         const trigger2FA = async () => {
           try {
-            const response = await fetch('/api/auth/send-2fa', {
+            console.log("[2FA] Auto-triggering 2FA for:", user.email);
+            const data = await fetchJSON('/api/auth/send-2fa', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email: user.email })
             });
-            if (response.ok) {
-              const data = await response.json();
-              setIsSimulation(!!data.simulation);
-              if (data.simulation && data.code) {
-                setSimulatedCode(data.code);
-              }
-              setEmail(user.email || '');
-              setShowEmail2FA(true);
+            
+            setIsSimulation(!!data.simulation);
+            if (data.simulation && data.code) {
+              setSimulatedCode(data.code);
             }
-          } catch (err) {
+            setEmail(user.email || '');
+            setShowEmail2FA(true);
+          } catch (err: any) {
             console.error("Auto-trigger 2FA error:", err);
+            setError(err.message);
           }
         };
         trigger2FA();
@@ -151,16 +153,11 @@ const Login: React.FC = () => {
     setEmail2FALoading(true);
     setError('');
     try {
-      const response = await fetch('/api/auth/verify-2fa', {
+      const data = await fetchJSON('/api/auth/verify-2fa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code: email2FACode })
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Código inválido');
-      }
 
       sessionStorage.setItem('2fa_verified', 'true');
       navigate('/app');
@@ -181,26 +178,12 @@ const Login: React.FC = () => {
         await signInWithEmailAndPassword(auth, email, password);
         
         // After successful login, initiate Email 2FA
-        const response = await fetch('/api/auth/send-2fa', {
+        const data = await fetchJSON('/api/auth/send-2fa', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email })
         });
 
-        if (!response.ok) {
-          let errorMessage = 'Falha ao enviar código de verificação.';
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
-          } catch (e) {
-            const text = await response.text();
-            errorMessage = `Erro do Servidor (${response.status}): ${text.slice(0, 100) || 'Sem resposta'}`;
-          }
-          setError(errorMessage);
-          throw new Error(errorMessage);
-        }
-
-        const data = await response.json();
         setIsSimulation(!!data.simulation);
         if (data.simulation && data.code) {
           setSimulatedCode(data.code);
