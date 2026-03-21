@@ -232,12 +232,21 @@ const Checkout: React.FC = () => {
                 </div>
                 <div className="flex justify-between text-slate-500 font-bold">
                   <span>Entrega</span>
-                  <span className="text-teal-600">Grátis</span>
+                  {total >= 500 ? (
+                    <span className="text-teal-600">Grátis</span>
+                  ) : (
+                    <span>{(150).toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' })}</span>
+                  )}
                 </div>
+                {total < 500 && (
+                  <p className="text-[10px] text-teal-600 font-black uppercase tracking-widest mt-2">
+                    Adicione mais {(500 - total).toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' })} para entrega grátis!
+                  </p>
+                )}
                 <div className="pt-4 border-t border-slate-100 flex justify-between items-end">
                   <span className="text-slate-900 font-black">Total</span>
                   <span className="text-3xl font-black text-teal-600 tracking-tighter">
-                    {total.toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' })}
+                    {(total >= 500 ? total : total + 150).toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' })}
                   </span>
                 </div>
               </div>

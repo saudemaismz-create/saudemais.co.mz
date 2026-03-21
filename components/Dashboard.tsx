@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, Search, MapPin, Pill, Activity, ShieldCheck, Calendar, Bell, Newspaper, ExternalLink, ShoppingBag, ShoppingCart, Plus, MessageSquare, Sparkles as SparklesIcon, X, Droplets, Heart, Moon, Footprints } from 'lucide-react';
+import { TrendingUp, Search, MapPin, Pill, Activity, ShieldCheck, Calendar, Bell, Newspaper, ExternalLink, ShoppingBag, ShoppingCart, Plus, MessageSquare, Sparkles as SparklesIcon, X, Droplets, Heart, Moon, Footprints, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getHealthNews } from '../services/geminiService';
@@ -13,8 +13,8 @@ import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHand
 import { useErrorBoundary } from 'react-error-boundary';
 
 const activityData = [
-  { name: 'Seg', val: 65 }, { name: 'Ter', val: 72 }, { name: 'Qua', val: 68 },
-  { name: 'Qui', val: 80 }, { name: 'Sex', val: 75 }, { name: 'Sab', val: 85 }, { name: 'Dom', val: 82 },
+  { name: 'Seg', val: 0 }, { name: 'Ter', val: 0 }, { name: 'Qua', val: 0 },
+  { name: 'Qui', val: 0 }, { name: 'Sex', val: 0 }, { name: 'Sab', val: 0 }, { name: 'Dom', val: 0 },
 ];
 
 const Dashboard: React.FC = () => {
@@ -37,10 +37,10 @@ const Dashboard: React.FC = () => {
   });
   
   const [liveMetrics, setLiveMetrics] = useState({
-    heartRate: 72,
-    hydration: 1.2,
-    sleep: 440, // minutes
-    steps: 3432
+    heartRate: 0,
+    hydration: 0,
+    sleep: 0, // minutes
+    steps: 0
   });
 
   // Calculate goals based on health data
@@ -52,28 +52,8 @@ const Dashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    // Simulate live metrics updating
-    const hrInterval = setInterval(() => {
-      setLiveMetrics(prev => {
-        const change = Math.floor(Math.random() * 5) - 2;
-        let newHr = prev.heartRate + change;
-        if (newHr < 60) newHr = 60;
-        if (newHr > 100) newHr = 100;
-        return { ...prev, heartRate: newHr };
-      });
-    }, 3000);
-
-    const stepsInterval = setInterval(() => {
-      setLiveMetrics(prev => ({
-        ...prev,
-        steps: prev.steps + Math.floor(Math.random() * 3)
-      }));
-    }, 5000);
-
-    return () => {
-      clearInterval(hrInterval);
-      clearInterval(stepsInterval);
-    };
+    // Simulation intervals removed to ensure new users find an empty state
+    return () => {};
   }, []);
 
   const formatSleep = (mins: number) => {
@@ -82,28 +62,7 @@ const Dashboard: React.FC = () => {
     return `${h}h ${m}m`;
   };
 
-  const notifications = [
-    {
-      id: 1,
-      title: 'Resumo Diário',
-      message: `Você deu ${liveMetrics.steps.toLocaleString()} passos hoje e dormiu ${formatSleep(liveMetrics.sleep)}. Continue assim!`,
-      time: 'Agora mesmo',
-      read: false,
-      icon: TrendingUp,
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-50'
-    },
-    {
-      id: 2,
-      title: 'Hidratação',
-      message: `Lembre-se de beber água! Você atingiu ${(liveMetrics.hydration / goals.hydration * 100).toFixed(0)}% da sua meta.`,
-      time: 'Há 2 horas',
-      read: true,
-      icon: Droplets,
-      color: 'text-blue-600',
-      bg: 'bg-blue-50'
-    }
-  ];
+  const notifications: any[] = [];
 
   useEffect(() => {
     getHealthNews().then(setNews);
@@ -369,12 +328,17 @@ const Dashboard: React.FC = () => {
 
       {/* NEW: Featured Medications Section (CENTRAL) */}
       <section>
-        <div className="flex items-center justify-between mb-5 px-1">
-          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <SparklesIcon className="text-teal-600" size={22} />
-            Produtos Patrocinados
-          </h2>
-          <button onClick={() => navigate('/app/search')} className="text-teal-600 text-sm font-bold hover:underline">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-5 px-1 gap-2">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <SparklesIcon className="text-teal-600" size={22} />
+              Produtos Patrocinados
+            </h2>
+            <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest mt-1 flex items-center gap-1">
+              <Truck size={12} /> Entregas grátis em Maputo e Matola acima de 500 MT
+            </p>
+          </div>
+          <button onClick={() => navigate('/app/search')} className="text-teal-600 text-sm font-bold hover:underline w-fit">
             Ver Catálogo
           </button>
         </div>
@@ -456,15 +420,27 @@ const Dashboard: React.FC = () => {
 
         {/* Real-time Health News via Gemini */}
         <div className="bg-white border border-slate-100 p-6 rounded-3xl shadow-sm overflow-hidden flex flex-col">
-          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
-            <Newspaper className="text-orange-500" size={20} />
-            Notícias Locais
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <Newspaper className="text-orange-500" size={20} />
+              Notícias Locais
+            </h3>
+            <button 
+              onClick={() => {
+                setNews({ text: 'Atualizando notícias...', links: [] });
+                getHealthNews(true).then(setNews);
+              }}
+              className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-teal-600 transition-colors"
+              title="Atualizar Notícias"
+            >
+              <Activity size={16} />
+            </button>
+          </div>
           <div className="flex-1 space-y-4 overflow-y-auto pr-2 max-h-[240px] text-sm text-slate-600 leading-relaxed">
             {news.text.split('\n').map((line, i) => line && <p key={i} className="pb-3 border-b border-slate-50 last:border-0">{line}</p>)}
           </div>
           <div className="mt-4 pt-4 border-t border-slate-50 space-y-2">
-            {news.links.slice(0, 2).map((link: any, i: number) => (
+            {news.links.slice(0, 3).map((link: any, i: number) => (
               <a key={i} href={link.uri} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-xs text-teal-600 font-bold hover:text-teal-700">
                 <ExternalLink size={12} /> {link.title || 'Ver fonte da notícia'}
               </a>

@@ -26,13 +26,13 @@ import { useErrorBoundary } from 'react-error-boundary';
 import { GoogleGenAI } from "@google/genai";
 
 const SALES_DATA = [
-  { name: 'Seg', sales: 4000, orders: 24 },
-  { name: 'Ter', sales: 3000, orders: 18 },
-  { name: 'Qua', sales: 2000, orders: 15 },
-  { name: 'Qui', sales: 2780, orders: 20 },
-  { name: 'Sex', sales: 1890, orders: 12 },
-  { name: 'Sáb', sales: 2390, orders: 16 },
-  { name: 'Dom', sales: 3490, orders: 22 },
+  { name: 'Seg', sales: 0, orders: 0 },
+  { name: 'Ter', sales: 0, orders: 0 },
+  { name: 'Qua', sales: 0, orders: 0 },
+  { name: 'Qui', sales: 0, orders: 0 },
+  { name: 'Sex', sales: 0, orders: 0 },
+  { name: 'Sáb', sales: 0, orders: 0 },
+  { name: 'Dom', sales: 0, orders: 0 },
 ];
 
 const StoreDashboard: React.FC = () => {

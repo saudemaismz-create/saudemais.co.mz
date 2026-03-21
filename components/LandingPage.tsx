@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, ShieldCheck, Activity, Search, MessageSquare, ArrowRight, CheckCircle2, MapPin, Pill } from 'lucide-react';
+import { Heart, ShieldCheck, Activity, Search, MessageSquare, ArrowRight, CheckCircle2, MapPin, Pill, Truck } from 'lucide-react';
 import { useFirebase } from './FirebaseProvider';
 
 const LandingPage: React.FC = () => {
@@ -88,16 +88,20 @@ const LandingPage: React.FC = () => {
                 <p className="text-xl text-slate-500 font-medium max-w-lg mb-10 leading-relaxed">
                   Conectamos pacientes a farmácias, médicos e diagnósticos inteligentes. Tudo o que precisa para cuidar da sua saúde, na palma da sua mão.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex flex-col sm:flex-row gap-4 items-center">
                   <button 
                     onClick={handleCTA}
                     className="px-10 py-5 bg-slate-900 text-white font-black rounded-2xl shadow-2xl hover:bg-slate-800 transition-all flex items-center justify-center gap-3 group"
                   >
                     {user ? 'Acessar a App' : 'Começar Agora'} <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" />
                   </button>
-                  <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="px-10 py-5 bg-white text-slate-900 border-2 border-slate-900 font-black rounded-2xl hover:bg-slate-50 transition-all">
-                    Saber Mais
-                  </button>
+                  <div className="flex items-center gap-3 px-6 py-4 bg-teal-50 border border-teal-100 rounded-2xl">
+                    <Truck size={24} className="text-teal-600" />
+                    <div>
+                      <p className="text-[10px] font-black text-teal-700 uppercase tracking-widest leading-none mb-1">Promoção</p>
+                      <p className="text-xs font-black text-slate-900">Entregas Grátis {'>'} 500 MT</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -376,8 +380,8 @@ const LandingPage: React.FC = () => {
         
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-16 text-center relative z-10">
           {[
-            { val: "500+", label: "Farmácias Parceiras" },
-            { val: "10k+", label: "Utilizadores Ativos" },
+            { val: "0+", label: "Farmácias Parceiras" },
+            { val: "0+", label: "Utilizadores Ativos" },
             { val: "24/7", label: "Apoio IA+" },
             { val: "100%", label: "Seguro & Privado" }
           ].map((stat, i) => (
