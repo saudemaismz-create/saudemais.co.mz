@@ -23,100 +23,106 @@ async function startServer() {
 
   // 2FA: Send Code
   app.post('/api/auth/send-2fa', async (req, res) => {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email é obrigatório' });
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ error: 'Email é obrigatório' });
 
-    console.log(`[2FA] Request to send code to: ${email}`);
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
+      console.log(`[2FA] Request to send code to: ${email}`);
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    tfaCodes.set(email, { code, expires });
+      tfaCodes.set(email, { code, expires });
 
-    console.log(`[2FA] Generated code for ${email}: ${code}`);
+      console.log(`[2FA] Generated code for ${email}: ${code}`);
 
-    // SMTP Configuration
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = parseInt(process.env.SMTP_PORT || '587');
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const smtpFrom = process.env.SMTP_FROM || 'no-reply@saudemais.co.mz';
-    const resendApiKey = process.env.RESEND_API_KEY;
+      // SMTP Configuration
+      const smtpHost = process.env.SMTP_HOST;
+      const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+      const smtpUser = process.env.SMTP_USER;
+      const smtpPass = process.env.SMTP_PASS;
+      const smtpFrom = process.env.SMTP_FROM || 'no-reply@saudemais.co.mz';
+      const resendApiKey = process.env.RESEND_API_KEY;
 
-    // Try Resend first if API key is present
-    if (resendApiKey) {
-      console.log('[2FA] Resend API Key found. Attempting to send email via Resend...');
-      try {
-        const resend = new Resend(resendApiKey);
-        await resend.emails.send({
-          from: smtpFrom.includes('<') ? smtpFrom : `Saúde Mais <${smtpFrom}>`,
-          to: email,
-          subject: 'Seu Código de Verificação Saúde Mais',
-          html: `
-            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px; margin: auto;">
-              <h2 style="color: #0d9488; text-align: center;">Saúde Mais</h2>
-              <p style="font-size: 16px; color: #333;">Olá,</p>
-              <p style="font-size: 16px; color: #333;">Seu código de verificação de dois fatores é:</p>
-              <div style="background: #f1f5f9; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0;">
-                <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #0d9488;">${code}</span>
+      // Try Resend first if API key is present
+      if (resendApiKey) {
+        console.log('[2FA] Resend API Key found. Attempting to send email via Resend...');
+        try {
+          const resend = new Resend(resendApiKey);
+          await resend.emails.send({
+            from: smtpFrom.includes('<') ? smtpFrom : `Saúde Mais <${smtpFrom}>`,
+            to: email,
+            subject: 'Seu Código de Verificação Saúde Mais',
+            html: `
+              <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px; margin: auto;">
+                <h2 style="color: #0d9488; text-align: center;">Saúde Mais</h2>
+                <p style="font-size: 16px; color: #333;">Olá,</p>
+                <p style="font-size: 16px; color: #333;">Seu código de verificação de dois fatores é:</p>
+                <div style="background: #f1f5f9; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0;">
+                  <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #0d9488;">${code}</span>
+                </div>
+                <p style="font-size: 14px; color: #666; text-align: center;">Este código expira em 10 minutos.</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 12px; color: #999; text-align: center;">Se você não solicitou este código, ignore este email.</p>
               </div>
-              <p style="font-size: 14px; color: #666; text-align: center;">Este código expira em 10 minutos.</p>
-              <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-              <p style="font-size: 12px; color: #999; text-align: center;">Se você não solicitou este código, ignore este email.</p>
-            </div>
-          `
-        });
-        console.log(`[2FA] Email sent successfully to ${email} via Resend`);
-        return res.json({ success: true, message: 'Código enviado por email (Resend).' });
-      } catch (error) {
-        console.error('[2FA] Resend error:', error);
-        // Fallback to SMTP if Resend fails
+            `
+          });
+          console.log(`[2FA] Email sent successfully to ${email} via Resend`);
+          return res.json({ success: true, message: 'Código enviado por email (Resend).' });
+        } catch (error) {
+          console.error('[2FA] Resend error:', error);
+          // Fallback to SMTP if Resend fails
+        }
       }
-    }
 
-    if (smtpHost && smtpUser && smtpPass) {
-      console.log('[2FA] SMTP configured. Attempting to send email...');
-      try {
-        const transporter = nodemailer.createTransport({
-          host: smtpHost,
-          port: smtpPort,
-          secure: smtpPort === 465,
-          auth: { user: smtpUser, pass: smtpPass }
-        });
+      if (smtpHost && smtpUser && smtpPass) {
+        console.log('[2FA] SMTP configured. Attempting to send email...');
+        try {
+          const transporter = nodemailer.createTransport({
+            host: smtpHost,
+            port: smtpPort,
+            secure: smtpPort === 465,
+            auth: { user: smtpUser, pass: smtpPass }
+          });
 
-        console.log(`[2FA] Sending email to ${email} via ${smtpHost}:${smtpPort}`);
-        await transporter.sendMail({
-          from: `"Saúde Mais" <${smtpFrom}>`,
-          to: email,
-          subject: 'Seu Código de Verificação Saúde Mais',
-          text: `Seu código de verificação é: ${code}. Ele expira em 10 minutos.`,
-          html: `
-            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px; margin: auto;">
-              <h2 style="color: #0d9488; text-align: center;">Saúde Mais</h2>
-              <p style="font-size: 16px; color: #333;">Olá,</p>
-              <p style="font-size: 16px; color: #333;">Seu código de verificação de dois fatores é:</p>
-              <div style="background: #f1f5f9; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0;">
-                <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #0d9488;">${code}</span>
+          console.log(`[2FA] Sending email to ${email} via ${smtpHost}:${smtpPort}`);
+          await transporter.sendMail({
+            from: `"Saúde Mais" <${smtpFrom}>`,
+            to: email,
+            subject: 'Seu Código de Verificação Saúde Mais',
+            text: `Seu código de verificação é: ${code}. Ele expira em 10 minutos.`,
+            html: `
+              <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px; margin: auto;">
+                <h2 style="color: #0d9488; text-align: center;">Saúde Mais</h2>
+                <p style="font-size: 16px; color: #333;">Olá,</p>
+                <p style="font-size: 16px; color: #333;">Seu código de verificação de dois fatores é:</p>
+                <div style="background: #f1f5f9; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0;">
+                  <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #0d9488;">${code}</span>
+                </div>
+                <p style="font-size: 14px; color: #666; text-align: center;">Este código expira em 10 minutos.</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 12px; color: #999; text-align: center;">Se você não solicitou este código, ignore este email.</p>
               </div>
-              <p style="font-size: 14px; color: #666; text-align: center;">Este código expira em 10 minutos.</p>
-              <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-              <p style="font-size: 12px; color: #999; text-align: center;">Se você não solicitou este código, ignore este email.</p>
-            </div>
-          `
+            `
+          });
+          
+          console.log(`[2FA] Email sent successfully to ${email} via SMTP`);
+          return res.json({ success: true, message: 'Código enviado por email.' });
+        } catch (error) {
+          console.error('[2FA] SMTP error:', error);
+          return res.status(500).json({ error: 'Falha ao enviar email via SMTP. Verifique as configurações.' });
+        }
+      } else {
+        console.warn('[2FA] SMTP not configured. Code logged to console only.');
+        return res.json({ 
+          success: true, 
+          simulation: true, 
+          code: code,
+          message: '[MODO SIMULAÇÃO] Código enviado (verifique o console do servidor).' 
         });
-        
-        return res.json({ success: true, message: 'Código enviado por email.' });
-      } catch (error) {
-        console.error('Error sending email:', error);
-        return res.status(500).json({ error: 'Falha ao enviar email. Verifique o console para o código.' });
       }
-    } else {
-      console.warn('SMTP not configured. Code logged to console only.');
-      return res.json({ 
-        success: true, 
-        simulation: true, 
-        code: code,
-        message: '[MODO SIMULAÇÃO] Código enviado (verifique o console do servidor).' 
-      });
+    } catch (err: any) {
+      console.error('[2FA] Global error:', err);
+      return res.status(500).json({ error: 'Erro interno ao processar 2FA.' });
     }
   });
 

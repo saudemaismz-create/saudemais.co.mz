@@ -189,7 +189,9 @@ const Login: React.FC = () => {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Falha ao enviar código de verificação.');
+          const errorMessage = errorData.error || 'Falha ao enviar código de verificação.';
+          setError(errorMessage);
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();
