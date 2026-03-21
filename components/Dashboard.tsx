@@ -243,7 +243,7 @@ const Dashboard: React.FC = () => {
                 <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-4">
                   <button onClick={markAllAsRead} className="text-xs font-bold text-teal-600 hover:text-teal-700">Marcar todas como lidas</button>
                   <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
-                  <button onClick={() => alert('Você já está vendo todas as notificações recentes.')} className="text-xs font-bold text-slate-500 hover:text-slate-700">Ver todas</button>
+                  <button onClick={() => navigate('/app/notifications')} className="text-xs font-bold text-slate-500 hover:text-slate-700">Ver todas</button>
                 </div>
               </div>
             )}

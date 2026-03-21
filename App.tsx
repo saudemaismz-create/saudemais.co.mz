@@ -11,6 +11,7 @@ import { MaintenanceGuard } from './components/MaintenanceGuard';
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const Search = lazy(() => import('./components/Search'));
 const Assistant = lazy(() => import('./components/Assistant'));
+const Notifications = lazy(() => import('./components/Notifications'));
 const Profile = lazy(() => import('./components/Profile'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const Login = lazy(() => import('./components/Login'));
@@ -57,6 +58,7 @@ const App: React.FC = () => {
                     <Route path="/app" element={<AuthGuard><Dashboard /></AuthGuard>} />
                     <Route path="/app/search" element={<AuthGuard><Search /></AuthGuard>} />
                     <Route path="/app/assistant" element={<AuthGuard><Assistant /></AuthGuard>} />
+                    <Route path="/app/notifications" element={<AuthGuard><Notifications /></AuthGuard>} />
                     <Route path="/app/profile" element={<AuthGuard><Profile /></AuthGuard>} />
                     <Route path="/app/pharmacy-panel" element={<AuthGuard><StoreDashboard /></AuthGuard>} />
                     <Route path="/app/admin" element={<AuthGuard><AdminDashboard /></AuthGuard>} />

@@ -24,6 +24,7 @@
     "react-error-boundary": "^6.1.1",
     "react-router-dom": "^7.11.0",
     "recharts": "^3.8.0",
+    "resend": "^6.9.4",
     "tailwindcss": "^4.2.1",
     "tsx": "^4.21.0",
     "vite-plugin-pwa": "^1.2.0"

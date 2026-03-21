@@ -32,6 +32,8 @@ const Login: React.FC = () => {
   const [showEmail2FA, setShowEmail2FA] = useState(false);
   const [email2FACode, setEmail2FACode] = useState('');
   const [email2FALoading, setEmail2FALoading] = useState(false);
+  const [isSimulation, setIsSimulation] = useState(false);
+  const [simulatedCode, setSimulatedCode] = useState('');
 
   useEffect(() => {
     // If user is already logged in and 2FA is verified (or not required yet)
@@ -162,9 +164,15 @@ const Login: React.FC = () => {
         });
 
         if (!response.ok) {
-          throw new Error('Falha ao enviar código de verificação.');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Falha ao enviar código de verificação.');
         }
 
+        const data = await response.json();
+        setIsSimulation(!!data.simulation);
+        if (data.simulation && data.code) {
+          setSimulatedCode(data.code);
+        }
         setShowEmail2FA(true);
       } else {
         // Validation for registration
@@ -347,6 +355,19 @@ const Login: React.FC = () => {
                 <p className="text-teal-800 text-sm font-bold text-center">
                   Enviamos um código de 6 dígitos para o seu email <strong>{email}</strong>.
                 </p>
+                {isSimulation && (
+                  <div className="mt-2 p-2 bg-rose-50 border border-rose-200 rounded-lg">
+                    <p className="text-rose-600 text-xs text-center font-black uppercase tracking-wider">
+                      [MODO SIMULAÇÃO]
+                    </p>
+                    <p className="text-rose-700 text-sm text-center font-bold mt-1">
+                      Use o código: <span className="text-lg tracking-widest">{simulatedCode}</span>
+                    </p>
+                  </div>
+                )}
+                <p className="text-teal-600 text-xs text-center mt-1">
+                  Verifique também a sua pasta de spam.
+                </p>
               </div>
 
               <div>
@@ -370,6 +391,38 @@ const Login: React.FC = () => {
                 >
                   {email2FALoading && <Loader2 size={18} className="animate-spin" />}
                   Confirmar Verificação
+                </button>
+                <button
+                  type="button"
+                  disabled={email2FALoading}
+                  onClick={async () => {
+                    setEmail2FALoading(true);
+                    setError('');
+                    try {
+                      const response = await fetch('/api/auth/send-2fa', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email })
+                      });
+                      if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.error || 'Falha ao reenviar código.');
+                      }
+                      const data = await response.json();
+                      setIsSimulation(!!data.simulation);
+                      if (data.simulation && data.code) {
+                        setSimulatedCode(data.code);
+                      }
+                      setError('Novo código enviado com sucesso!');
+                    } catch (err: any) {
+                      setError(err.message);
+                    } finally {
+                      setEmail2FALoading(false);
+                    }
+                  }}
+                  className="w-full flex justify-center items-center py-3 px-4 border border-slate-200 rounded-xl text-sm font-bold text-teal-600 bg-white hover:bg-teal-50 transition-all"
+                >
+                  Reenviar Código
                 </button>
                 <button
                   type="button"
