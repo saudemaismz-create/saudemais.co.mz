@@ -2,10 +2,22 @@
 import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
 import { ChatMessage } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiInstance: GoogleGenAI | null = null;
+
+const getAI = () => {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("A chave API do Gemini não foi configurada. Por favor, adicione GEMINI_API_KEY nas definições.");
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+};
 
 export const getHealthAdvice = async (history: ChatMessage[], message: string): Promise<{text: string, links: any[]}> => {
   try {
+    const ai = getAI();
     // Limit history to last 6 messages to keep tokens low and stay within free tier
     const recentHistory = history.slice(-6).map(msg => ({
       role: msg.role,
@@ -37,6 +49,9 @@ export const getHealthAdvice = async (history: ChatMessage[], message: string): 
     return { text, links };
   } catch (error) {
     console.error("Gemini API Error:", error);
+    if (error instanceof Error && error.message.includes("API key")) {
+      return { text: "Erro de configuração: Chave API inválida ou ausente.", links: [] };
+    }
     return { text: "Erro ao conectar com o assistente. Verifique sua conexão.", links: [] };
   }
 };
@@ -54,6 +69,7 @@ export const getHealthNews = async () => {
       }
     }
 
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: "Quais são as 3 notícias mais importantes de saúde pública hoje? Resuma cada uma em uma frase curta.",
