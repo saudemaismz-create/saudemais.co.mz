@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, MessageSquare, User, Calendar, MapPin, Heart, ShoppingBag, ShoppingCart, ShieldAlert } from 'lucide-react';
+import { Home, Search, MessageSquare, User, Calendar, MapPin, Heart, ShoppingBag, ShoppingCart, ShieldAlert, FileText, Bell, Users } from 'lucide-react';
 import { useCart } from './CartContext';
 import { useFirebase } from './FirebaseProvider';
 
@@ -20,6 +20,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navItems = [
     { icon: Home, label: 'Início', path: '/app' },
     { icon: MessageSquare, label: 'IA+', path: '/app/assistant' },
+    { icon: FileText, label: 'Receitas', path: '/app/prescriptions' },
+    { icon: Bell, label: 'Lembretes', path: '/app/reminders' },
+    { icon: Users, label: 'Família', path: '/app/family' },
+    { icon: MessageSquare, label: 'Chat', path: '/app/chat' },
     { icon: ShoppingBag, label: 'Minha Loja', path: '/app/pharmacy-panel' },
     { icon: Calendar, label: 'Agenda', path: '/app/bookings' },
     { icon: User, label: 'Perfil', path: '/app/profile' },
@@ -36,7 +40,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 pb-20 md:pb-0 md:pl-64">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-100 h-screen fixed left-0 top-0 p-6 overflow-y-auto scrollbar-hide">
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-100 h-screen fixed left-0 top-0 p-6 overflow-y-auto">
         <div className="flex items-center gap-3 mb-10 px-2 shrink-0">
           <div className="p-1">
             <img 
@@ -49,7 +53,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <span className="text-2xl font-black text-slate-900 tracking-tighter">Saúde <span className="text-teal-600">Mais</span></span>
         </div>
         
-        <nav className="flex-1 space-y-3">
+        <nav className="flex-1 space-y-3 pb-10">
           {navItems.map((item) => (
             <button
               key={item.path}

@@ -19,6 +19,21 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Custom Scrollbar for Sidebar */
+  aside::-webkit-scrollbar {
+    width: 4px;
+  }
+  aside::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  aside::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+  }
+  aside::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+  }
 }
 
 @keyframes bounce-slow {

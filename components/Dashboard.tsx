@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, Search, MapPin, Pill, Activity, ShieldCheck, Calendar, Bell, Newspaper, ExternalLink, ShoppingBag, ShoppingCart, Plus, MessageSquare, Sparkles as SparklesIcon, X, Droplets, Heart, Moon, Footprints, Truck } from 'lucide-react';
+import { TrendingUp, Search, MapPin, Pill, Activity, ShieldCheck, Calendar, Bell, Newspaper, ExternalLink, ShoppingBag, ShoppingCart, Plus, MessageSquare, Sparkles as SparklesIcon, X, Droplets, Heart, Moon, Footprints, Truck, FileText, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getHealthNews } from '../services/geminiService';
@@ -334,6 +334,36 @@ const Dashboard: React.FC = () => {
           </div>
         </section>
       )}
+
+      {/* Health Services Quick Access */}
+      <section>
+        <div className="flex items-center justify-between mb-4 px-1">
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <ShieldCheck className="text-teal-600" size={22} />
+            Serviços de Saúde
+          </h2>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: 'Receitas', icon: FileText, path: '/app/prescriptions', color: 'text-teal-600', bg: 'bg-teal-50', desc: 'Gerir receitas' },
+            { label: 'Lembretes', icon: Bell, path: '/app/reminders', color: 'text-orange-600', bg: 'bg-orange-50', desc: 'Alertas de medicação' },
+            { label: 'Família', icon: Users, path: '/app/family', color: 'text-indigo-600', bg: 'bg-indigo-50', desc: 'Perfis dependentes' },
+            { label: 'Chat', icon: MessageSquare, path: '/app/chat', color: 'text-rose-600', bg: 'bg-rose-50', desc: 'Falar com farmácia' },
+          ].map((service, i) => (
+            <button
+              key={i}
+              onClick={() => navigate(service.path)}
+              className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center text-center gap-2 hover:border-teal-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-500 group"
+            >
+              <div className={`${service.bg} ${service.color} w-14 h-14 rounded-2xl flex items-center justify-center mb-1 shadow-inner group-hover:scale-110 transition-transform`}>
+                <service.icon size={28} strokeWidth={2.5} />
+              </div>
+              <span className="text-sm font-black text-slate-800 tracking-tight">{service.label}</span>
+              <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{service.desc}</span>
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* Vitals Summary - Improved with gradients and hover effects */}
       <section>

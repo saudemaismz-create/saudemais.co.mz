@@ -16,7 +16,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        ((request.auth.token.get('email', '').matches("(?i)caneabacarhimiacane@gmail.com") && request.auth.token.get('email_verified', false) == true) ||
+        (request.auth.token.get('email', '').matches("(?i)caneabacarhimiacane@gmail.com") ||
          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'customer') == 'admin'));
     }
@@ -91,6 +91,42 @@ service cloud.firestore {
              data.status in ['active', 'paused', 'expired'];
     }
 
+    function isValidPrescription(data) {
+      return hasOnlyAllowedFields(['userId', 'imageUrl', 'status', 'pharmacyId', 'createdAt', 'notes']) &&
+             data.userId is string &&
+             data.imageUrl is string &&
+             data.status in ['Pendente', 'Aprovada', 'Rejeitada'];
+    }
+
+    function isValidReminder(data) {
+      return hasOnlyAllowedFields(['userId', 'medicationName', 'dosage', 'frequency', 'times', 'startDate', 'endDate', 'active', 'createdAt']) &&
+             data.userId is string &&
+             data.medicationName is string &&
+             data.times is list;
+    }
+
+    function isValidFamilyMember(data) {
+      return hasOnlyAllowedFields(['ownerId', 'name', 'relationship', 'bloodType', 'weight', 'height', 'birthDate', 'photoUrl']) &&
+             data.ownerId is string &&
+             data.name is string &&
+             data.relationship is string;
+    }
+
+    function isValidChatRoom(data) {
+      return hasOnlyAllowedFields(['participants', 'lastMessage', 'updatedAt', 'pharmacyId', 'userId']) &&
+             data.participants is list &&
+             data.participants.size() == 2 &&
+             data.pharmacyId is string &&
+             data.userId is string;
+    }
+
+    function isValidChatMessage(data) {
+      return hasOnlyAllowedFields(['roomId', 'senderId', 'text', 'createdAt']) &&
+             data.roomId is string &&
+             data.senderId is string &&
+             data.text is string;
+    }
+
     // ===============================================================
     // Collection Rules
     // ===============================================================
@@ -119,8 +155,9 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         isAdmin() || 
         (resource.data.customerUid == request.auth.uid) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         resource.data.get('pharmacyIds', []).hasAny([get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('pharmacyId', '')]))
+        (resource.data.pharmacyIds.hasAny([get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('pharmacyId', '')])) ||
+        (resource.data.pharmacyIds.hasAny([request.auth.uid])) || // Fallback for direct ownership
+        (exists(/databases/$(database)/documents/pharmacies/$(resource.data.pharmacyIds[0])) && get(/databases/$(database)/documents/pharmacies/$(resource.data.pharmacyIds[0])).data.ownerUid == request.auth.uid)
       );
       allow create: if isAuthenticated() && 
         request.resource.data.customerUid == request.auth.uid && 
@@ -128,8 +165,7 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (
         isAdmin() || 
         (resource.data.customerUid == request.auth.uid && request.resource.data.status == resource.data.status) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         resource.data.get('pharmacyIds', []).hasAny([get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('pharmacyId', '')]))
+        (resource.data.pharmacyIds.hasAny([get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('pharmacyId', '')]))
       );
     }
 
@@ -156,6 +192,38 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    match /prescriptions/{prescriptionId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin() || (resource.data.pharmacyId != null && isPharmacyOwner(resource.data.pharmacyId)));
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId) && isValidPrescription(request.resource.data);
+      allow update: if isAuthenticated() && (isAdmin() || (isOwner(resource.data.userId) && request.resource.data.status == resource.data.status) || (resource.data.pharmacyId != null && isPharmacyOwner(resource.data.pharmacyId))) && isValidPrescription(request.resource.data);
+      allow delete: if isAdmin() || isOwner(resource.data.userId);
+    }
+
+    match /reminders/{reminderId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId) && isValidReminder(request.resource.data);
+      allow update: if isAuthenticated() && isOwner(resource.data.userId) && isValidReminder(request.resource.data);
+      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+
+    match /family/{memberId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.ownerId);
+      allow create: if isAuthenticated() && isOwner(request.resource.data.ownerId) && isValidFamilyMember(request.resource.data);
+      allow update: if isAuthenticated() && isOwner(resource.data.ownerId) && isValidFamilyMember(request.resource.data);
+      allow delete: if isAuthenticated() && isOwner(resource.data.ownerId);
+    }
+
+    match /chat_rooms/{roomId} {
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participants && isValidChatRoom(request.resource.data);
+      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants && isValidChatRoom(request.resource.data);
+    }
+
+    match /chat_messages/{messageId} {
+      allow read: if isAuthenticated() && exists(/databases/$(database)/documents/chat_rooms/$(resource.data.roomId)) && request.auth.uid in get(/databases/$(database)/documents/chat_rooms/$(resource.data.roomId)).data.participants;
+      allow create: if isAuthenticated() && exists(/databases/$(database)/documents/chat_rooms/$(request.resource.data.roomId)) && request.auth.uid in get(/databases/$(database)/documents/chat_rooms/$(request.resource.data.roomId)).data.participants && isValidChatMessage(request.resource.data);
     }
   }
 }
