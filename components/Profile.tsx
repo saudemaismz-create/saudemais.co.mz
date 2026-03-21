@@ -53,6 +53,33 @@ const Profile: React.FC = () => {
     }
   };
 
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstallable(false);
+    }
+    setDeferredPrompt(null);
+  };
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -281,6 +308,26 @@ const Profile: React.FC = () => {
           </div>
         )}
       </div>
+
+      {isInstallable && (
+        <div className="bg-teal-600 rounded-3xl shadow-lg shadow-teal-100 overflow-hidden mb-6">
+          <button 
+            onClick={handleInstallClick}
+            className="w-full px-6 py-5 flex items-center justify-between hover:bg-teal-700 transition-colors group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="text-white bg-white/20 p-3 rounded-2xl">
+                <ShoppingBag size={24} />
+              </div>
+              <div className="text-left">
+                <span className="font-black text-white block italic">Instalar Aplicativo</span>
+                <span className="text-xs text-teal-100 font-bold uppercase tracking-widest">Baixe para o seu telemóvel</span>
+              </div>
+            </div>
+            <ChevronRight size={20} className="text-white/50 group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
+      )}
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-4 px-6 border-b border-slate-50 font-bold text-slate-800">Negócios</div>
