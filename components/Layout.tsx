@@ -19,7 +19,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const navItems = [
     { icon: Home, label: 'Início', path: '/app' },
-    { icon: Search, label: 'Buscar', path: '/app/search' },
     { icon: MessageSquare, label: 'IA+', path: '/app/assistant' },
     { icon: ShoppingBag, label: 'Minha Loja', path: '/app/pharmacy-panel' },
     { icon: Calendar, label: 'Agenda', path: '/app/bookings' },
@@ -37,8 +36,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 pb-20 md:pb-0 md:pl-64">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-100 h-screen fixed left-0 top-0 p-6">
-        <div className="flex items-center gap-3 mb-10 px-2">
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-100 h-screen fixed left-0 top-0 p-6 overflow-y-auto scrollbar-hide">
+        <div className="flex items-center gap-3 mb-10 px-2 shrink-0">
           <div className="p-1">
             <img 
               src="https://img.icons8.com/fluency/48/health-book.png" 

@@ -211,13 +211,24 @@ const ProductDetail: React.FC = () => {
                   <Plus size={20} />
                 </button>
               </div>
-              <button 
-                onClick={handleAddToCart}
-                className="flex-1 w-full py-5 bg-teal-600 text-white font-black rounded-2xl shadow-2xl shadow-teal-900/20 hover:scale-[1.02] hover:bg-teal-500 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm"
-              >
-                <ShoppingBag size={20} />
-                Adicionar ao Carrinho
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3 w-full">
+                <button 
+                  onClick={handleAddToCart}
+                  className="flex-1 py-5 bg-white border-2 border-teal-600 text-teal-600 font-black rounded-2xl shadow-sm hover:bg-teal-50 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm"
+                >
+                  <ShoppingBag size={20} />
+                  Carrinho
+                </button>
+                <button 
+                  onClick={() => {
+                    handleAddToCart();
+                    navigate('/app/checkout');
+                  }}
+                  className="flex-1 py-5 bg-teal-600 text-white font-black rounded-2xl shadow-2xl shadow-teal-900/20 hover:scale-[1.02] hover:bg-teal-500 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm"
+                >
+                  Compra Direta
+                </button>
+              </div>
             </div>
           </div>
         </div>

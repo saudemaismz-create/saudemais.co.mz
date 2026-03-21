@@ -406,7 +406,7 @@ const Checkout: React.FC = () => {
                     <div className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl">M</div>
                     <span className="font-black text-slate-900">M-Pesa</span>
                   </button>
-
+ 
                   <button 
                     onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'emola' }))}
                     className={`p-8 rounded-[2.5rem] border-4 transition-all flex flex-col items-center gap-4 ${
@@ -420,6 +420,21 @@ const Checkout: React.FC = () => {
                   </button>
                 </div>
 
+                <div className="relative">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-2 block">Número da Carteira Móvel (M-Pesa/e-Mola)</label>
+                  <div className="relative">
+                    <Smartphone className="absolute left-5 top-1/2 -translate-y-1/2 text-teal-600" size={20} />
+                    <input 
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      placeholder="84 XXX XXXX ou 86 XXX XXXX"
+                      className="w-full pl-14 pr-6 py-5 bg-slate-50 border-none rounded-[2rem] font-bold text-slate-900 placeholder:text-slate-300 focus:ring-2 focus:ring-teal-500 transition-all"
+                    />
+                  </div>
+                </div>
+ 
                 <div className="p-6 bg-amber-50 rounded-3xl border border-amber-100 flex gap-4">
                   <AlertCircle className="text-amber-600 flex-shrink-0" size={24} />
                   <p className="text-amber-900 text-sm font-bold leading-relaxed">

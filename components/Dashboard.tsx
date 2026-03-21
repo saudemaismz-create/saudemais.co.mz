@@ -62,7 +62,44 @@ const Dashboard: React.FC = () => {
     return `${h}h ${m}m`;
   };
 
-  const notifications: any[] = [];
+  const [notifications, setNotifications] = useState([
+    { 
+      id: '1', 
+      title: 'Entrega em Caminho', 
+      message: 'O seu pedido #8821 está em trânsito e chegará em breve.', 
+      time: '10 min', 
+      read: false, 
+      icon: Truck, 
+      bg: 'bg-blue-50', 
+      color: 'text-blue-600' 
+    },
+    { 
+      id: '2', 
+      title: 'Dica de Saúde', 
+      message: 'Lembre-se de beber pelo menos 2L de água hoje.', 
+      time: '2h', 
+      read: false, 
+      icon: Droplets, 
+      bg: 'bg-teal-50', 
+      color: 'text-teal-600' 
+    },
+    { 
+      id: '3', 
+      title: 'Consulta Agendada', 
+      message: 'Sua consulta com Dr. Silva é amanhã às 09:00.', 
+      time: '5h', 
+      read: true, 
+      icon: Calendar, 
+      bg: 'bg-indigo-50', 
+      color: 'text-indigo-600' 
+    }
+  ]);
+
+  const markAllAsRead = () => {
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
     getHealthNews().then(setNews);
@@ -171,7 +208,9 @@ const Dashboard: React.FC = () => {
               className="relative p-2.5 bg-white rounded-2xl border border-slate-100 text-slate-400 hover:text-teal-600 transition-all hover:shadow-lg shadow-sm"
             >
               <Bell size={24} />
-              <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 border-2 border-white rounded-full"></span>
+              {unreadCount > 0 && (
+                <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 border-2 border-white rounded-full"></span>
+              )}
             </button>
 
             {/* Notifications Dropdown */}
@@ -179,7 +218,9 @@ const Dashboard: React.FC = () => {
               <div className="absolute right-0 mt-3 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
                 <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                   <h3 className="font-bold text-slate-800">Notificações</h3>
-                  <span className="text-xs font-black text-teal-600 bg-teal-100 px-2 py-1 rounded-full">1 Nova</span>
+                  {unreadCount > 0 && (
+                    <span className="text-xs font-black text-teal-600 bg-teal-100 px-2 py-1 rounded-full">{unreadCount} Novas</span>
+                  )}
                 </div>
                 <div className="max-h-96 overflow-y-auto">
                   {notifications.map(notif => (
@@ -199,8 +240,10 @@ const Dashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
-                <div className="p-3 bg-slate-50 border-t border-slate-100 text-center">
-                  <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="text-xs font-bold text-teal-600 hover:text-teal-700">Marcar todas como lidas</button>
+                <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-4">
+                  <button onClick={markAllAsRead} className="text-xs font-bold text-teal-600 hover:text-teal-700">Marcar todas como lidas</button>
+                  <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
+                  <button onClick={() => alert('Você já está vendo todas as notificações recentes.')} className="text-xs font-bold text-slate-500 hover:text-slate-700">Ver todas</button>
                 </div>
               </div>
             )}

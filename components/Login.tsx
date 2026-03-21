@@ -22,14 +22,21 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
 
-  // MFA States
+  // 2FA States
   const [mfaResolver, setMfaResolver] = useState<any>(null);
   const [verificationCode, setVerificationCode] = useState('');
   const [verificationId, setVerificationId] = useState('');
   const [mfaLoading, setMfaLoading] = useState(false);
+  
+  // Custom Email 2FA
+  const [showEmail2FA, setShowEmail2FA] = useState(false);
+  const [email2FACode, setEmail2FACode] = useState('');
+  const [email2FALoading, setEmail2FALoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthReady && user) {
+    // If user is already logged in and 2FA is verified (or not required yet)
+    const is2FAVerified = sessionStorage.getItem('2fa_verified') === 'true';
+    if (isAuthReady && user && is2FAVerified) {
       navigate('/app');
     }
   }, [user, isAuthReady, navigate]);
@@ -103,12 +110,38 @@ const Login: React.FC = () => {
       const cred = PhoneAuthProvider.credential(verificationId, verificationCode);
       const multiFactorAssertion = PhoneMultiFactorGenerator.assertion(cred);
       await mfaResolver.resolveSignIn(multiFactorAssertion);
+      sessionStorage.setItem('2fa_verified', 'true');
       navigate('/app');
     } catch (err: any) {
       console.error("MFA verification error:", err);
       setError('Código de verificação inválido ou expirado.');
     } finally {
       setMfaLoading(false);
+    }
+  };
+
+  const handleVerifyEmail2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmail2FALoading(true);
+    setError('');
+    try {
+      const response = await fetch('/api/auth/verify-2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code: email2FACode })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Código inválido');
+      }
+
+      sessionStorage.setItem('2fa_verified', 'true');
+      navigate('/app');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setEmail2FALoading(false);
     }
   };
 
@@ -120,7 +153,19 @@ const Login: React.FC = () => {
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
-        navigate('/app');
+        
+        // After successful login, initiate Email 2FA
+        const response = await fetch('/api/auth/send-2fa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+
+        if (!response.ok) {
+          throw new Error('Falha ao enviar código de verificação.');
+        }
+
+        setShowEmail2FA(true);
       } else {
         // Validation for registration
         if (!name || !email || !phone || !password) {
@@ -147,6 +192,8 @@ const Login: React.FC = () => {
         // Save additional user data to Firestore
         await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
 
+        // For new users, we can skip 2FA for the first time or require it
+        sessionStorage.setItem('2fa_verified', 'true');
         navigate('/app');
       }
     } catch (err: any) {
@@ -187,7 +234,7 @@ const Login: React.FC = () => {
       } else if (err.code === 'auth/invalid-email') {
         setError('O formato do email é inválido.');
       } else {
-        setError(`Ocorreu um erro inesperado. Verifique os seus dados e tente novamente.`);
+        setError(err.message || `Ocorreu um erro inesperado. Verifique os seus dados e tente novamente.`);
       }
     } finally {
       setLoading(false);
@@ -213,9 +260,9 @@ const Login: React.FC = () => {
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-black text-slate-900 tracking-tight">
-          {mfaResolver ? 'Verificação de Segurança' : (isLogin ? 'Entrar na sua conta' : 'Criar nova conta')}
+          {mfaResolver || showEmail2FA ? 'Verificação de Segurança' : (isLogin ? 'Entrar na sua conta' : 'Criar nova conta')}
         </h2>
-        {!mfaResolver && (
+        {!mfaResolver && !showEmail2FA && (
           <p className="mt-2 text-center text-sm text-slate-500 font-medium">
             {isLogin ? 'Ou ' : 'Já tem uma conta? '}
             <button
@@ -279,6 +326,56 @@ const Login: React.FC = () => {
                     setMfaResolver(null);
                     setVerificationId('');
                     setVerificationCode('');
+                    setError('');
+                  }}
+                  className="w-full flex justify-center items-center py-3 px-4 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 bg-white hover:bg-slate-50 transition-all"
+                >
+                  Voltar ao Login
+                </button>
+              </div>
+            </form>
+          ) : showEmail2FA ? (
+            <form className="space-y-5" onSubmit={handleVerifyEmail2FA}>
+              {error && (
+                <div className="bg-rose-50 border border-rose-100 text-rose-600 px-4 py-3 rounded-xl text-sm font-medium flex items-start gap-3">
+                  <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                  <span>{error}</span>
+                </div>
+              )}
+              
+              <div className="p-4 bg-teal-50 rounded-2xl border border-teal-100 mb-6">
+                <p className="text-teal-800 text-sm font-bold text-center">
+                  Enviamos um código de 6 dígitos para o seu email <strong>{email}</strong>.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Código de Verificação Email *</label>
+                <input
+                  type="text"
+                  required
+                  value={email2FACode}
+                  onChange={(e) => setEmail2FACode(e.target.value)}
+                  className="appearance-none block w-full px-4 py-3 border border-slate-200 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-shadow font-medium text-center tracking-widest text-lg"
+                  placeholder="000000"
+                  maxLength={6}
+                />
+              </div>
+
+              <div className="pt-2 flex flex-col gap-3">
+                <button
+                  type="submit"
+                  disabled={email2FALoading || email2FACode.length < 6}
+                  className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-teal-200 text-sm font-black text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                >
+                  {email2FALoading && <Loader2 size={18} className="animate-spin" />}
+                  Confirmar Verificação
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEmail2FA(false);
+                    setEmail2FACode('');
                     setError('');
                   }}
                   className="w-full flex justify-center items-center py-3 px-4 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 bg-white hover:bg-slate-50 transition-all"
