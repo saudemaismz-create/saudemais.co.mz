@@ -17,6 +17,7 @@ const Login = lazy(() => import('./components/Login'));
 const StoreDashboard = lazy(() => import('./components/StoreDashboard'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const Checkout = lazy(() => import('./components/Checkout'));
+const ProductDetail = lazy(() => import('./components/ProductDetail'));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -60,6 +61,7 @@ const App: React.FC = () => {
                     <Route path="/app/pharmacy-panel" element={<AuthGuard><StoreDashboard /></AuthGuard>} />
                     <Route path="/app/admin" element={<AuthGuard><AdminDashboard /></AuthGuard>} />
                     <Route path="/app/checkout" element={<AuthGuard><Checkout /></AuthGuard>} />
+                    <Route path="/app/product/:id" element={<AuthGuard><ProductDetail /></AuthGuard>} />
                     <Route path="/app/bookings" element={<AuthGuard><div className="flex flex-col items-center justify-center py-20">
                       <div className="bg-white p-12 rounded-3xl border border-slate-100 shadow-sm text-center">
                         <h2 className="text-2xl font-bold text-[#525252]">Em Breve</h2>

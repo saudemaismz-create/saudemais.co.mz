@@ -203,8 +203,13 @@ const Login: React.FC = () => {
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="flex justify-center">
-          <div className="bg-teal-600 p-3 rounded-2xl text-white shadow-xl shadow-teal-200">
-            <Heart size={32} fill="white" />
+          <div className="p-1">
+            <img 
+              src="https://img.icons8.com/fluency/96/health-book.png" 
+              alt="Saúde Mais Logo" 
+              className="w-16 h-16"
+              referrerPolicy="no-referrer"
+            />
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-black text-slate-900 tracking-tight">

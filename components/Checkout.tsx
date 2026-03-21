@@ -66,8 +66,31 @@ const Checkout: React.FC = () => {
     setPaymentStatus('waiting');
 
     try {
-      // Simulate payment gateway delay (M-Pesa/e-Mola USSD prompt)
-      await new Promise(resolve => setTimeout(resolve, 3500));
+      // 1. Initiate Payment via Server
+      const paymentResponse = await fetch('/api/payment/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: total,
+          phone: formData.phone,
+          provider: formData.paymentMethod,
+          orderId: `ORD_${Date.now()}`
+        })
+      });
+
+      if (!paymentResponse.ok) {
+        throw new Error('Falha ao iniciar o pagamento.');
+      }
+
+      const paymentData = await paymentResponse.json();
+      
+      if (!paymentData.success) {
+        throw new Error(paymentData.error || 'Erro no pagamento.');
+      }
+
+      // 2. Simulate waiting for USSD confirmation (C2B flow)
+      // In a real app, you would poll the status or wait for a webhook
+      await new Promise(resolve => setTimeout(resolve, 4500));
 
       const orderData: Omit<Order, 'id'> = {
         customerName: profile.name,

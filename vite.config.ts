@@ -27,17 +27,17 @@ export default defineConfig(({ mode }) => {
             orientation: 'portrait',
             icons: [
               {
-                src: 'https://picsum.photos/seed/saudemais/192/192',
+                src: 'https://img.icons8.com/fluency/192/health-book.png',
                 sizes: '192x192',
                 type: 'image/png'
               },
               {
-                src: 'https://picsum.photos/seed/saudemais/512/512',
+                src: 'https://img.icons8.com/fluency/512/health-book.png',
                 sizes: '512x512',
                 type: 'image/png'
               },
               {
-                src: 'https://picsum.photos/seed/saudemais/512/512',
+                src: 'https://img.icons8.com/fluency/512/health-book.png',
                 sizes: '512x512',
                 type: 'image/png',
                 purpose: 'any maskable'

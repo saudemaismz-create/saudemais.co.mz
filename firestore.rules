@@ -16,15 +16,15 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (('email' in request.auth.token && request.auth.token.email.matches("(?i).*caneabacarhimiacane.*")) ||
+        ((request.auth.token.get('email', '').matches("(?i)caneabacarhimiacane@gmail.com") && request.auth.token.get('email_verified', false) == true) ||
          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'customer') == 'admin'));
     }
 
     function isPharmacyOwner(pharmacyId) {
       return isAuthenticated() && 
         exists(/databases/$(database)/documents/pharmacies/$(pharmacyId)) &&
-        get(/databases/$(database)/documents/pharmacies/$(pharmacyId)).data.ownerUid == request.auth.uid;
+        get(/databases/$(database)/documents/pharmacies/$(pharmacyId)).data.get('ownerUid', '') == request.auth.uid;
     }
 
     function hasRequiredFields(fields) {
@@ -74,6 +74,7 @@ service cloud.firestore {
              data.customerUid is string &&
              data.items is list &&
              data.total is number &&
+             data.pharmacyIds is list &&
              data.status in ['Pendente', 'Em Processamento', 'Em Trânsito', 'Entregue', 'Cancelado'] &&
              data.paymentMethod in ['mpesa', 'emola', 'card'];
     }
@@ -95,27 +96,41 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read, write: if true;
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data);
     }
 
     match /pharmacies/{pharmacyId} {
       allow read: if true;
-      allow create: if isAuthenticated() && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if isAuthenticated() && (isAdmin() || resource.data.ownerUid == request.auth.uid);
+      allow create: if isAuthenticated() && (isAdmin() || request.resource.data.ownerUid == request.auth.uid) && isValidPharmacy(request.resource.data);
+      allow update: if isAuthenticated() && (isAdmin() || resource.data.ownerUid == request.auth.uid) && isValidPharmacy(request.resource.data);
       allow delete: if isAdmin();
     }
 
     match /medications/{medicationId} {
       allow read: if true;
-      allow create: if isPharmacyOwner(request.resource.data.pharmacyId) && isValidMedication(request.resource.data);
-      allow update: if (isPharmacyOwner(resource.data.pharmacyId) && isValidMedication(request.resource.data)) || isAdmin();
-      allow delete: if isPharmacyOwner(resource.data.pharmacyId) || isAdmin();
+      allow create: if (isAdmin() || isPharmacyOwner(request.resource.data.pharmacyId)) && isValidMedication(request.resource.data);
+      allow update: if (isAdmin() || isPharmacyOwner(resource.data.pharmacyId)) && isValidMedication(request.resource.data);
+      allow delete: if isAdmin() || isPharmacyOwner(resource.data.pharmacyId);
     }
 
     match /orders/{orderId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.customerUid == request.auth.uid;
-      allow update: if isAuthenticated();
+      allow read: if isAuthenticated() && (
+        isAdmin() || 
+        (resource.data.customerUid == request.auth.uid) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         resource.data.get('pharmacyIds', []).hasAny([get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('pharmacyId', '')]))
+      );
+      allow create: if isAuthenticated() && 
+        request.resource.data.customerUid == request.auth.uid && 
+        isValidOrder(request.resource.data);
+      allow update: if isAuthenticated() && (
+        isAdmin() || 
+        (resource.data.customerUid == request.auth.uid && request.resource.data.status == resource.data.status) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         resource.data.get('pharmacyIds', []).hasAny([get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('pharmacyId', '')]))
+      );
     }
 
     match /reviews/{reviewId} {

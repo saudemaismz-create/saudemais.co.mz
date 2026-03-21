@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, Search, MapPin, Pill, Activity, ShieldCheck, Calendar, Bell, Newspaper, ExternalLink, ShoppingBag, Plus, MessageSquare, Sparkles as SparklesIcon, X, Droplets, Heart, Moon, Footprints } from 'lucide-react';
+import { TrendingUp, Search, MapPin, Pill, Activity, ShieldCheck, Calendar, Bell, Newspaper, ExternalLink, ShoppingBag, ShoppingCart, Plus, MessageSquare, Sparkles as SparklesIcon, X, Droplets, Heart, Moon, Footprints } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getHealthNews } from '../services/geminiService';
@@ -8,6 +8,7 @@ import { collection, onSnapshot, query, limit, where, orderBy } from 'firebase/f
 import { db } from '../firebase';
 import { Pharmacy, Medication, Order } from '../types';
 import { useFirebase } from './FirebaseProvider';
+import { useCart } from './CartContext';
 import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHandler';
 import { useErrorBoundary } from 'react-error-boundary';
 
@@ -19,6 +20,7 @@ const activityData = [
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { profile, user } = useFirebase();
+  const { addItem, itemCount } = useCart();
   const { showBoundary } = useErrorBoundary();
   const [news, setNews] = useState<{text: string, links: any[]}>({ text: 'Carregando notícias...', links: [] });
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
@@ -175,50 +177,88 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 pb-10">
       <section className="flex items-center justify-between relative">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Saúde <span className="text-teal-600">Mais</span></h1>
-          <p className="text-slate-500 font-medium text-sm md:text-base">Kanimambo, {profile?.name?.split(' ')[0] || 'Visitante'}. Como se sente hoje?</p>
+        <div className="flex items-center gap-3">
+          <div className="p-1">
+            <img 
+              src="https://img.icons8.com/fluency/48/health-book.png" 
+              alt="Logo" 
+              className="w-10 h-10"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Saúde <span className="text-teal-600">Mais</span></h1>
+            <p className="text-slate-500 font-medium text-sm md:text-base">Kanimambo, {profile?.name?.split(' ')[0] || 'Visitante'}. Como se sente hoje?</p>
+          </div>
         </div>
-        <div className="relative">
+        <div className="flex items-center gap-3">
+          {/* Cart Icon */}
           <button 
-            onClick={() => setShowNotifications(!showNotifications)}
+            onClick={() => navigate('/app/checkout')}
             className="relative p-2.5 bg-white rounded-2xl border border-slate-100 text-slate-400 hover:text-teal-600 transition-all hover:shadow-lg shadow-sm"
           >
-            <Bell size={24} />
-            <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 border-2 border-white rounded-full"></span>
+            <ShoppingCart size={24} />
+            {itemCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-teal-600 text-white text-[10px] font-black flex items-center justify-center rounded-full border-2 border-white">
+                {itemCount}
+              </span>
+            )}
           </button>
 
-          {/* Notifications Dropdown */}
-          {showNotifications && (
-            <div className="absolute right-0 mt-3 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
-              <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="font-bold text-slate-800">Notificações</h3>
-                <span className="text-xs font-black text-teal-600 bg-teal-100 px-2 py-1 rounded-full">1 Nova</span>
-              </div>
-              <div className="max-h-96 overflow-y-auto">
-                {notifications.map(notif => (
-                  <div key={notif.id} className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer ${!notif.read ? 'bg-teal-50/30' : ''}`}>
-                    <div className="flex gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${notif.bg} ${notif.color}`}>
-                        <notif.icon size={20} />
-                      </div>
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className={`text-sm font-bold ${!notif.read ? 'text-slate-900' : 'text-slate-700'}`}>{notif.title}</h4>
-                          <span className="text-[10px] font-bold text-slate-400">{notif.time}</span>
+          {/* Notifications Icon */}
+          <div className="relative">
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative p-2.5 bg-white rounded-2xl border border-slate-100 text-slate-400 hover:text-teal-600 transition-all hover:shadow-lg shadow-sm"
+            >
+              <Bell size={24} />
+              <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 border-2 border-white rounded-full"></span>
+            </button>
+
+            {/* Notifications Dropdown */}
+            {showNotifications && (
+              <div className="absolute right-0 mt-3 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+                <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                  <h3 className="font-bold text-slate-800">Notificações</h3>
+                  <span className="text-xs font-black text-teal-600 bg-teal-100 px-2 py-1 rounded-full">1 Nova</span>
+                </div>
+                <div className="max-h-96 overflow-y-auto">
+                  {notifications.map(notif => (
+                    <div key={notif.id} className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer ${!notif.read ? 'bg-teal-50/30' : ''}`}>
+                      <div className="flex gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${notif.bg} ${notif.color}`}>
+                          <notif.icon size={20} />
                         </div>
-                        <p className="text-xs text-slate-500 leading-relaxed">{notif.message}</p>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className={`text-sm font-bold ${!notif.read ? 'text-slate-900' : 'text-slate-700'}`}>{notif.title}</h4>
+                            <span className="text-[10px] font-bold text-slate-400">{notif.time}</span>
+                          </div>
+                          <p className="text-xs text-slate-500 leading-relaxed">{notif.message}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <div className="p-3 bg-slate-50 border-t border-slate-100 text-center">
+                  <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="text-xs font-bold text-teal-600 hover:text-teal-700">Marcar todas como lidas</button>
+                </div>
               </div>
-              <div className="p-3 bg-slate-50 border-t border-slate-100 text-center">
-                <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="text-xs font-bold text-teal-600 hover:text-teal-700">Marcar todas como lidas</button>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
+      </section>
+
+      {/* Search Bar below greeting */}
+      <section className="relative group">
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-teal-600 transition-colors" size={20} />
+        <input 
+          type="text"
+          placeholder="Pesquisar medicamentos ou farmácias..."
+          className="w-full pl-14 pr-6 py-4 bg-white border border-slate-100 rounded-2xl shadow-sm focus:ring-4 focus:ring-teal-500/10 transition-all font-medium cursor-pointer"
+          onClick={() => navigate('/app/search')}
+          readOnly
+        />
       </section>
 
       {/* NEW: Dynamic Banner Ads Section */}
@@ -340,21 +380,32 @@ const Dashboard: React.FC = () => {
         </div>
         <div className="flex gap-4 overflow-x-auto pb-4 -mx-1 px-1 scrollbar-hide">
           {medications.map((med) => (
-            <div key={med.id} className={`min-w-[180px] bg-white rounded-3xl border p-4 shadow-sm hover:shadow-md transition-all flex-shrink-0 relative overflow-hidden ${med.isSponsored ? 'border-teal-200 ring-1 ring-teal-100' : 'border-slate-100'}`}>
+            <div 
+              key={med.id} 
+              onClick={() => navigate(`/app/product/${med.id}`)}
+              className={`min-w-[180px] bg-white rounded-3xl border p-4 shadow-sm hover:shadow-md transition-all flex-shrink-0 relative overflow-hidden cursor-pointer group ${med.isSponsored ? 'border-teal-200 ring-1 ring-teal-100' : 'border-slate-100'}`}
+            >
               {med.isSponsored && (
                 <div className="absolute top-0 right-0 bg-teal-600 text-white text-[7px] font-black px-2 py-0.5 rounded-bl-lg uppercase tracking-widest">
                   Patrocinado
                 </div>
               )}
-              <div className="relative mb-3">
+              <div className="relative mb-3 overflow-hidden rounded-2xl">
                 <img 
                   src={med.image} 
                   alt={med.name} 
-                  className="w-full h-32 object-cover rounded-2xl" 
+                  className="w-full h-32 object-cover transition-transform duration-500 group-hover:scale-110" 
                   loading="lazy"
                   referrerPolicy="no-referrer"
                 />
-                <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="absolute -bottom-2 -right-2 bg-teal-600 text-white p-2 rounded-xl shadow-lg hover:scale-110 transition-transform">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addItem(med);
+                    alert(`${med.name} adicionado ao carrinho!`);
+                  }} 
+                  className="absolute -bottom-2 -right-2 bg-teal-600 text-white p-2 rounded-xl shadow-lg hover:scale-110 transition-transform active:scale-95"
+                >
                   <Plus size={16} />
                 </button>
               </div>
@@ -363,7 +414,7 @@ const Dashboard: React.FC = () => {
               {med.description && (
                 <p className="text-[10px] text-slate-500 font-medium mb-2 line-clamp-2 leading-tight">{med.description}</p>
               )}
-              <p className="text-teal-700 font-black text-base">{med.price} MT</p>
+              <p className="text-teal-700 font-black text-base">{med.price.toLocaleString()} MT</p>
             </div>
           ))}
           {medications.length === 0 && (

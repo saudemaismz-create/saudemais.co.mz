@@ -90,8 +90,13 @@ const Profile: React.FC = () => {
   if (!user) {
     return (
       <div className="max-w-md mx-auto bg-white p-10 rounded-[3rem] shadow-xl text-center border border-slate-100">
-        <div className="w-20 h-20 bg-teal-50 text-teal-600 rounded-3xl flex items-center justify-center mx-auto mb-6">
-          <User size={40} />
+        <div className="p-2 flex items-center justify-center mx-auto mb-6">
+          <img 
+            src="https://img.icons8.com/fluency/96/health-book.png" 
+            alt="Logo" 
+            className="w-16 h-16"
+            referrerPolicy="no-referrer"
+          />
         </div>
         <h2 className="text-2xl font-black text-slate-900 mb-4 italic">Perfil de Saúde</h2>
         <p className="text-slate-500 mb-8 font-medium">Faça login para aceder ao seu histórico de saúde, receitas e agendamentos.</p>

@@ -37,8 +37,13 @@ const LandingPage: React.FC = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="bg-teal-600 p-2 rounded-xl text-white shadow-md">
-              <Heart size={20} fill="white" />
+            <div className="p-1">
+              <img 
+                src="https://img.icons8.com/fluency/48/health-book.png" 
+                alt="Logo" 
+                className="w-8 h-8"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <span className="text-2xl font-black text-slate-900 tracking-tighter">Saúde <span className="text-teal-600">Mais</span></span>
           </div>
@@ -405,8 +410,13 @@ const LandingPage: React.FC = () => {
       <footer className="py-12 border-t border-slate-100 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-2">
-            <div className="bg-teal-600 p-1.5 rounded-lg text-white">
-              <Heart size={16} fill="white" />
+            <div className="p-1">
+              <img 
+                src="https://img.icons8.com/fluency/48/health-book.png" 
+                alt="Logo" 
+                className="w-6 h-6"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <span className="text-xl font-black text-slate-900 tracking-tighter">Saúde <span className="text-teal-600">Mais</span></span>
           </div>

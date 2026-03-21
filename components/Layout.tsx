@@ -39,8 +39,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-100 h-screen fixed left-0 top-0 p-6">
         <div className="flex items-center gap-3 mb-10 px-2">
-          <div className="bg-teal-600 p-2.5 rounded-2xl text-white shadow-lg shadow-teal-100">
-            <Heart size={24} fill="white" />
+          <div className="p-1">
+            <img 
+              src="https://img.icons8.com/fluency/48/health-book.png" 
+              alt="Logo" 
+              className="w-10 h-10"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <span className="text-2xl font-black text-slate-900 tracking-tighter">Saúde <span className="text-teal-600">Mais</span></span>
         </div>
@@ -97,8 +102,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Mobile Header */}
       <header className="md:hidden flex items-center justify-between px-6 py-5 bg-white border-b border-slate-100 sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="bg-teal-600 p-2 rounded-xl text-white shadow-md">
-            <Heart size={18} fill="white" />
+          <div className="p-1">
+            <img 
+              src="https://img.icons8.com/fluency/48/health-book.png" 
+              alt="Logo" 
+              className="w-8 h-8"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <span className="text-xl font-black text-slate-900 tracking-tighter">Saúde Mais</span>
         </div>

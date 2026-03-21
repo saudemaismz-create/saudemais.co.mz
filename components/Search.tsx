@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search as SearchIcon, MapPin, Pill, Info, ChevronRight, Star, ShoppingCart, Plus, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Medication, Pharmacy } from '../types';
@@ -8,6 +9,7 @@ import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHand
 import { useCart } from './CartContext';
 
 const Search: React.FC = () => {
+  const navigate = useNavigate();
   const [queryStr, setQueryStr] = useState('');
   const [activeTab, setActiveTab] = useState<'meds' | 'pharmacies'>('meds');
   const [medications, setMedications] = useState<Medication[]>([]);
@@ -112,7 +114,11 @@ const Search: React.FC = () => {
         ) : activeTab === 'meds' ? (
           filteredMeds.length > 0 ? (
             filteredMeds.map((med) => (
-              <div key={med.id} className={`bg-white p-5 rounded-[2rem] border flex gap-6 hover:shadow-xl transition-all group items-center relative overflow-hidden ${med.isSponsored ? 'border-teal-200 bg-teal-50/10' : 'border-slate-50'}`}>
+              <div 
+                key={med.id} 
+                onClick={() => navigate(`/app/product/${med.id}`)}
+                className={`bg-white p-5 rounded-[2rem] border flex gap-6 hover:shadow-xl transition-all group items-center relative overflow-hidden cursor-pointer ${med.isSponsored ? 'border-teal-200 bg-teal-50/10' : 'border-slate-50'}`}
+              >
                 {med.isSponsored && (
                   <div className="absolute top-0 right-0 bg-teal-600 text-white text-[8px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-widest">
                     Patrocinado
@@ -120,7 +126,7 @@ const Search: React.FC = () => {
                 )}
                 <img 
                   src={med.image} 
-                  className="w-28 h-28 rounded-2xl object-cover bg-slate-50 shadow-sm" 
+                  className="w-28 h-28 rounded-2xl object-cover bg-slate-50 shadow-sm transition-transform duration-500 group-hover:scale-105" 
                   alt={med.name} 
                   loading="lazy"
                   referrerPolicy="no-referrer"
@@ -131,7 +137,7 @@ const Search: React.FC = () => {
                       <h3 className="text-xl font-black text-slate-900">{med.name}</h3>
                       <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-full uppercase tracking-widest">{med.category}</span>
                     </div>
-                    <p className="text-2xl font-black text-slate-900">{med.price} <span className="text-sm font-bold text-slate-400">MT</span></p>
+                    <p className="text-2xl font-black text-slate-900">{med.price.toLocaleString()} <span className="text-sm font-bold text-slate-400">MT</span></p>
                   </div>
                   <p className="text-sm text-slate-500 mt-2 line-clamp-1 font-medium">{med.description}</p>
                   <div className="flex items-center justify-between mt-5">
@@ -146,7 +152,10 @@ const Search: React.FC = () => {
                       )}
                     </div>
                     <button 
-                      onClick={() => handleAddToCart(med)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddToCart(med);
+                      }}
                       className={`p-3 rounded-2xl shadow-lg hover:scale-110 transition-all flex items-center gap-2 px-5 ${
                         addedId === med.id ? 'bg-green-500 text-white' : 'bg-teal-600 text-white'
                       }`}
