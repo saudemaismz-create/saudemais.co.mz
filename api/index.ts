@@ -7,6 +7,13 @@ import cors from 'cors';
 const app = express();
 const PORT = 3000;
 
+app.get('/', (req, res, next) => {
+  if (req.url === '/') {
+    console.log('[SERVER] Root request received');
+  }
+  next();
+});
+
 app.use(express.json());
 app.use(cors());
 
@@ -96,29 +103,44 @@ app.all('/api/*', (req, res) => {
   });
 });
 
-// Vite middleware for development
-if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {
-  // Dynamic import to avoid crash on Vercel
-  import('vite').then(({ createServer: createViteServer }) => {
-    createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    }).then(vite => {
+// Start server
+const startServer = async () => {
+  console.log(`[SERVER] NODE_ENV: ${process.env.NODE_ENV}, VERCEL: ${process.env.VERCEL}`);
+  
+  if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {
+    console.log('[SERVER] Starting in development mode with Vite middleware...');
+    try {
+      const { createServer: createViteServer } = await import('vite');
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      });
       app.use(vite.middlewares);
+      console.log('[SERVER] Vite middleware attached.');
+    } catch (err) {
+      console.error('[SERVER] Failed to initialize Vite middleware:', err);
+    }
+  } else if (process.env.VERCEL !== '1') {
+    console.log('[SERVER] Starting in production mode serving static files...');
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('(.*)', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  // Always listen if not on Vercel
+  if (process.env.VERCEL !== '1') {
+    try {
       app.listen(PORT, '0.0.0.0', () => {
         console.log(`Server running on http://localhost:${PORT}`);
       });
-    });
-  });
-} else if (process.env.VERCEL !== '1') {
-  const distPath = path.join(process.cwd(), 'dist');
-  app.use(express.static(distPath));
-  app.get('(.*)', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-}
+    } catch (err) {
+      console.error('[SERVER] Failed to start listening:', err);
+    }
+  }
+};
+
+startServer();
 
 export default app;

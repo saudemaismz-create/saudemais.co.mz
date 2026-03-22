@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithPopup
+} from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { Heart, MapPin, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
@@ -77,6 +83,25 @@ const Login: React.FC = () => {
         setError('O formato do email é inválido.');
       } else {
         setError(`Erro ao enviar email de recuperação. Tente novamente.`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      navigate('/app');
+    } catch (err: any) {
+      console.error("Google login error:", err);
+      if (err.code === 'auth/operation-not-allowed') {
+        setError('O login com Google não está ativado no Console do Firebase. Por favor, ative-o em Autenticação > Métodos de login.');
+      } else {
+        setError('Falha ao entrar com Google. Tente novamente.');
       }
     } finally {
       setLoading(false);
@@ -305,6 +330,25 @@ const Login: React.FC = () => {
                 {isLogin ? 'Entrar' : 'Criar Conta'}
               </button>
             </div>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-slate-500 font-medium">Ou continue com</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full flex justify-center items-center gap-3 py-3 px-4 border border-slate-200 rounded-xl shadow-sm bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-all disabled:opacity-50 active:scale-[0.98]"
+            >
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+              Google
+            </button>
             </form>
         </motion.div>
       </div>
