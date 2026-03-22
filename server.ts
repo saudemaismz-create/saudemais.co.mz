@@ -24,21 +24,19 @@ async function startServer() {
     next();
   });
 
-  const apiRouter = express.Router();
-
   // Health check
-  apiRouter.get("/health", (req, res) => {
+  app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
   });
 
   // 2FA: Send Code
-  apiRouter.post(['/auth/send-2fa', '/auth/send-2fa/'], async (req, res) => {
+  app.post(['/api/auth/send-2fa', '/api/auth/send-2fa/'], async (req, res) => {
     try {
       const { email: rawEmail } = req.body;
       if (!rawEmail) return res.status(400).json({ error: 'Email é obrigatório' });
 
       const email = rawEmail.toLowerCase().trim();
-      console.log(`[2FA] Request to send code to: ${email}`);
+      console.log(`[API] POST /api/auth/send-2fa - Email: ${email}`);
       
       // Bypass for test user
       if (email === 'caneabacarhimiacane@gmail.com') {
@@ -153,12 +151,12 @@ async function startServer() {
   });
 
   // 2FA: Verify Code
-  apiRouter.post(['/auth/verify-2fa', '/auth/verify-2fa/'], (req, res) => {
+  app.post(['/api/auth/verify-2fa', '/api/auth/verify-2fa/'], (req, res) => {
     const { email: rawEmail, code } = req.body;
     if (!rawEmail || !code) return res.status(400).json({ error: 'Email e código são obrigatórios' });
 
     const email = rawEmail.toLowerCase().trim();
-    console.log(`[2FA] Verifying code for ${email}: ${code}`);
+    console.log(`[API] POST /api/auth/verify-2fa - Email: ${email}, Code: ${code}`);
 
     const stored = tfaCodes.get(email);
     if (!stored) {
@@ -183,7 +181,7 @@ async function startServer() {
   });
 
   // Payment Status check
-  apiRouter.get("/payment/status", (req, res) => {
+  app.get("/api/payment/status", (req, res) => {
     const hasToken = !!process.env.PAYMENT_GATEWAY_TOKEN;
     res.json({ 
       configured: hasToken,
@@ -193,11 +191,11 @@ async function startServer() {
   });
 
   // Payment API Route
-  apiRouter.post('/payment/initiate', async (req, res) => {
+  app.post('/api/payment/initiate', async (req, res) => {
     const { amount, phone, provider, orderId } = req.body;
     const apiKey = process.env.PAYMENT_GATEWAY_TOKEN;
 
-    console.log(`Initiating ${provider} payment for order ${orderId}: ${amount} MT to ${phone}`);
+    console.log(`[API] POST /api/payment/initiate - Order: ${orderId}`);
 
     // If no API key is set, we fall back to simulation mode so the app doesn't break for the user
     if (!apiKey) {
@@ -249,11 +247,9 @@ async function startServer() {
     }
   });
 
-  // Mount API Router
-  app.use('/api', apiRouter);
-
-  // Catch-all for /api that returns JSON instead of falling through to Vite
+  // Catch-all for /api that returns JSON instead of falling through to Vite/Static
   app.all('/api/*', (req, res) => {
+    console.warn(`[SERVER] 404 on API route: ${req.method} ${req.url}`);
     res.status(404).json({ 
       error: `API route not found: ${req.method} ${req.url}`,
       suggestion: "Check if the route is correctly defined in server.ts"
