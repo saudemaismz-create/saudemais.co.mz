@@ -32,17 +32,12 @@ const LoadingFallback = () => (
 
 const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isAuthReady } = useFirebase();
-  const is2FAVerified = sessionStorage.getItem('2fa_verified') === 'true';
   
   if (!isAuthReady) {
     return <LoadingFallback />;
   }
   
   if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!is2FAVerified) {
     return <Navigate to="/login" replace />;
   }
   
