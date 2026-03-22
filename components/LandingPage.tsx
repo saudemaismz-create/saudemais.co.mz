@@ -10,7 +10,8 @@ const LandingPage: React.FC = () => {
   const { user, isAuthReady } = useFirebase();
 
   useEffect(() => {
-    if (isAuthReady && user) {
+    const is2FAVerified = sessionStorage.getItem('2fa_verified') === 'true';
+    if (isAuthReady && user && is2FAVerified) {
       navigate('/app');
     }
   }, [user, isAuthReady, navigate]);

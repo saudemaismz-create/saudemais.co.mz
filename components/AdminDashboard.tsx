@@ -21,6 +21,8 @@ import {
   Tooltip, ResponsiveContainer, Cell, PieChart, Pie
 } from 'recharts';
 
+import { fetchJSON } from '../utils/api';
+
 const AdminDashboard: React.FC = () => {
   const { user, profile, isAuthReady } = useFirebase();
   const { showBoundary } = useErrorBoundary();
@@ -39,8 +41,7 @@ const AdminDashboard: React.FC = () => {
   const [gatewayStatus, setGatewayStatus] = useState<any>(null);
 
   useEffect(() => {
-    fetch('/api/payment/status')
-      .then(res => res.json())
+    fetchJSON('/api/payment/status', {})
       .then(setGatewayStatus)
       .catch(console.error);
   }, []);

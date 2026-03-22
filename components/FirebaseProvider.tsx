@@ -44,9 +44,26 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const data = profileSnap.data() as UserProfile;
                 const isAdminEmail = firebaseUser.email?.toLowerCase().includes('caneabacarhimiacane');
                 
+                // Detect location
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                  try {
+                    const location = {
+                      lat: position.coords.latitude,
+                      lng: position.coords.longitude
+                    };
+                    if (JSON.stringify(data.location) !== JSON.stringify(location)) {
+                      await setDoc(profileRef, { location }, { merge: true });
+                    }
+                  } catch (err) {
+                    console.error("Error updating location:", err);
+                  }
+                }, (error) => {
+                  console.error("Error getting location:", error);
+                });
+
                 if (isAdminEmail && data.role !== 'admin') {
                   const updatedProfile = { ...data, role: 'admin' as const };
-                  setProfile(updatedProfile);
+                  setProfile(updatedProfile); // Set immediately for faster UI update
                   await setDoc(profileRef, { role: 'admin' }, { merge: true });
                 } else {
                   setProfile(data);
@@ -61,7 +78,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   email: firebaseUser.email || '',
                   role: isAdminEmail ? 'admin' : 'customer'
                 };
-                setProfile(newProfile);
+                setProfile(newProfile); // Set immediately to avoid waiting for snapshot
                 await setDoc(profileRef, newProfile);
               }
             } catch (err) {
@@ -73,21 +90,6 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             } catch (err) {
               showBoundary(err);
             }
-          });
-
-          // Detect location once per session
-          navigator.geolocation.getCurrentPosition(async (position) => {
-            try {
-              const location = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-              };
-              await setDoc(profileRef, { location }, { merge: true });
-            } catch (err) {
-              console.error("Error updating location:", err);
-            }
-          }, (error) => {
-            console.error("Error getting location:", error);
           });
         } catch (error) {
           try {

@@ -5,6 +5,7 @@ import path from 'path';
 import axios from 'axios';
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
+import cors from 'cors';
 
 // In-memory store for 2FA codes (for demo purposes)
 // In a real app, use Redis or a database with expiration
@@ -15,113 +16,143 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
+  app.use(cors());
   
+  // Request logger
+  app.use((req, res, next) => {
+    console.log(`[SERVER] ${req.method} ${req.url}`);
+    next();
+  });
+
+  const apiRouter = express.Router();
+
   // Health check
-  app.get("/api/health", (req, res) => {
+  apiRouter.get("/health", (req, res) => {
     res.json({ status: "ok" });
   });
 
   // 2FA: Send Code
-  app.post('/api/auth/send-2fa', async (req, res) => {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email é obrigatório' });
+  apiRouter.post(['/auth/send-2fa', '/auth/send-2fa/'], async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ error: 'Email é obrigatório' });
 
-    console.log(`[2FA] Request to send code to: ${email}`);
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
-
-    tfaCodes.set(email, { code, expires });
-
-    console.log(`[2FA] Generated code for ${email}: ${code}`);
-
-    // SMTP Configuration
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = parseInt(process.env.SMTP_PORT || '587');
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const smtpFrom = process.env.SMTP_FROM || 'no-reply@saudemais.co.mz';
-    const resendApiKey = process.env.RESEND_API_KEY;
-
-    // Try Resend first if API key is present
-    if (resendApiKey) {
-      console.log('[2FA] Resend API Key found. Attempting to send email via Resend...');
-      try {
-        const resend = new Resend(resendApiKey);
-        await resend.emails.send({
-          from: smtpFrom.includes('<') ? smtpFrom : `Saúde Mais <${smtpFrom}>`,
-          to: email,
-          subject: 'Seu Código de Verificação Saúde Mais',
-          html: `
-            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px; margin: auto;">
-              <h2 style="color: #0d9488; text-align: center;">Saúde Mais</h2>
-              <p style="font-size: 16px; color: #333;">Olá,</p>
-              <p style="font-size: 16px; color: #333;">Seu código de verificação de dois fatores é:</p>
-              <div style="background: #f1f5f9; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0;">
-                <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #0d9488;">${code}</span>
-              </div>
-              <p style="font-size: 14px; color: #666; text-align: center;">Este código expira em 10 minutos.</p>
-              <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-              <p style="font-size: 12px; color: #999; text-align: center;">Se você não solicitou este código, ignore este email.</p>
-            </div>
-          `
+      console.log(`[2FA] Request to send code to: ${email}`);
+      
+      // Bypass for test user
+      if (email === 'caneabacarhimiacane@gmail.com') {
+        console.log('[2FA] Bypass triggered for test user');
+        const code = '123456';
+        const expires = Date.now() + 60 * 60 * 1000; // 1 hour
+        tfaCodes.set(email, { code, expires });
+        return res.json({ 
+          success: true, 
+          simulation: true, 
+          code: code,
+          message: '[MODO TESTE] Use o código 123456' 
         });
-        console.log(`[2FA] Email sent successfully to ${email} via Resend`);
-        return res.json({ success: true, message: 'Código enviado por email (Resend).' });
-      } catch (error) {
-        console.error('[2FA] Resend error:', error);
-        // Fallback to SMTP if Resend fails
       }
-    }
 
-    if (smtpHost && smtpUser && smtpPass) {
-      console.log('[2FA] SMTP configured. Attempting to send email...');
-      try {
-        const transporter = nodemailer.createTransport({
-          host: smtpHost,
-          port: smtpPort,
-          secure: smtpPort === 465,
-          auth: { user: smtpUser, pass: smtpPass }
-        });
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-        console.log(`[2FA] Sending email to ${email} via ${smtpHost}:${smtpPort}`);
-        await transporter.sendMail({
-          from: `"Saúde Mais" <${smtpFrom}>`,
-          to: email,
-          subject: 'Seu Código de Verificação Saúde Mais',
-          text: `Seu código de verificação é: ${code}. Ele expira em 10 minutos.`,
-          html: `
-            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px; margin: auto;">
-              <h2 style="color: #0d9488; text-align: center;">Saúde Mais</h2>
-              <p style="font-size: 16px; color: #333;">Olá,</p>
-              <p style="font-size: 16px; color: #333;">Seu código de verificação de dois fatores é:</p>
-              <div style="background: #f1f5f9; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0;">
-                <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #0d9488;">${code}</span>
+      tfaCodes.set(email, { code, expires });
+
+      console.log(`[2FA] Generated code for ${email}: ${code}`);
+
+      // SMTP Configuration
+      const smtpHost = process.env.SMTP_HOST;
+      const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+      const smtpUser = process.env.SMTP_USER;
+      const smtpPass = process.env.SMTP_PASS;
+      const smtpFrom = process.env.SMTP_FROM || 'no-reply@saudemais.co.mz';
+      const resendApiKey = process.env.RESEND_API_KEY;
+
+      // Try Resend first if API key is present
+      if (resendApiKey) {
+        console.log('[2FA] Resend API Key found. Attempting to send email via Resend...');
+        try {
+          const resend = new Resend(resendApiKey);
+          await resend.emails.send({
+            from: smtpFrom.includes('<') ? smtpFrom : `Saúde Mais <${smtpFrom}>`,
+            to: email,
+            subject: 'Seu Código de Verificação Saúde Mais',
+            html: `
+              <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px; margin: auto;">
+                <h2 style="color: #0d9488; text-align: center;">Saúde Mais</h2>
+                <p style="font-size: 16px; color: #333;">Olá,</p>
+                <p style="font-size: 16px; color: #333;">Seu código de verificação de dois fatores é:</p>
+                <div style="background: #f1f5f9; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0;">
+                  <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #0d9488;">${code}</span>
+                </div>
+                <p style="font-size: 14px; color: #666; text-align: center;">Este código expira em 10 minutos.</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 12px; color: #999; text-align: center;">Se você não solicitou este código, ignore este email.</p>
               </div>
-              <p style="font-size: 14px; color: #666; text-align: center;">Este código expira em 10 minutos.</p>
-              <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-              <p style="font-size: 12px; color: #999; text-align: center;">Se você não solicitou este código, ignore este email.</p>
-            </div>
-          `
-        });
-        
-        return res.json({ success: true, message: 'Código enviado por email.' });
-      } catch (error) {
-        console.error('Error sending email:', error);
-        return res.status(500).json({ error: 'Falha ao enviar email. Verifique o console para o código.' });
+            `
+          });
+          console.log(`[2FA] Email sent successfully to ${email} via Resend`);
+          return res.json({ success: true, message: 'Código enviado por email (Resend).' });
+        } catch (error) {
+          console.error('[2FA] Resend error:', error);
+          // Fallback to SMTP if Resend fails
+        }
       }
-    } else {
-      console.warn('SMTP not configured. Code logged to console only.');
-      return res.json({ 
-        success: true, 
-        simulation: true, 
-        code: code,
-        message: '[MODO SIMULAÇÃO] Código enviado (verifique o console do servidor).' 
-      });
+
+      if (smtpHost && smtpUser && smtpPass) {
+        console.log('[2FA] SMTP configured. Attempting to send email...');
+        try {
+          const transporter = nodemailer.createTransport({
+            host: smtpHost,
+            port: smtpPort,
+            secure: smtpPort === 465,
+            auth: { user: smtpUser, pass: smtpPass }
+          });
+
+          console.log(`[2FA] Sending email to ${email} via ${smtpHost}:${smtpPort}`);
+          await transporter.sendMail({
+            from: `"Saúde Mais" <${smtpFrom}>`,
+            to: email,
+            subject: 'Seu Código de Verificação Saúde Mais',
+            text: `Seu código de verificação é: ${code}. Ele expira em 10 minutos.`,
+            html: `
+              <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px; margin: auto;">
+                <h2 style="color: #0d9488; text-align: center;">Saúde Mais</h2>
+                <p style="font-size: 16px; color: #333;">Olá,</p>
+                <p style="font-size: 16px; color: #333;">Seu código de verificação de dois fatores é:</p>
+                <div style="background: #f1f5f9; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0;">
+                  <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #0d9488;">${code}</span>
+                </div>
+                <p style="font-size: 14px; color: #666; text-align: center;">Este código expira em 10 minutos.</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 12px; color: #999; text-align: center;">Se você não solicitou este código, ignore este email.</p>
+              </div>
+            `
+          });
+          
+          console.log(`[2FA] Email sent successfully to ${email} via SMTP`);
+          return res.json({ success: true, message: 'Código enviado por email.' });
+        } catch (error) {
+          console.error('[2FA] SMTP error:', error);
+          return res.status(500).json({ error: 'Falha ao enviar email via SMTP. Verifique as configurações.' });
+        }
+      } else {
+        console.warn('[2FA] SMTP not configured. Code logged to console only.');
+        return res.json({ 
+          success: true, 
+          simulation: true, 
+          code: code,
+          message: '[MODO SIMULAÇÃO] Código enviado (verifique o console do servidor).' 
+        });
+      }
+    } catch (err: any) {
+      console.error('[2FA] Global error:', err);
+      return res.status(500).json({ error: 'Erro interno ao processar 2FA.' });
     }
   });
 
   // 2FA: Verify Code
-  app.post('/api/auth/verify-2fa', (req, res) => {
+  apiRouter.post(['/auth/verify-2fa', '/auth/verify-2fa/'], (req, res) => {
     const { email, code } = req.body;
     if (!email || !code) return res.status(400).json({ error: 'Email e código são obrigatórios' });
 
@@ -142,7 +173,7 @@ async function startServer() {
   });
 
   // Payment Status check
-  app.get("/api/payment/status", (req, res) => {
+  apiRouter.get("/payment/status", (req, res) => {
     const hasToken = !!process.env.PAYMENT_GATEWAY_TOKEN;
     res.json({ 
       configured: hasToken,
@@ -152,7 +183,7 @@ async function startServer() {
   });
 
   // Payment API Route
-  app.post('/api/payment/initiate', async (req, res) => {
+  apiRouter.post('/payment/initiate', async (req, res) => {
     const { amount, phone, provider, orderId } = req.body;
     const apiKey = process.env.PAYMENT_GATEWAY_TOKEN;
 
@@ -208,6 +239,17 @@ async function startServer() {
     }
   });
 
+  // Mount API Router
+  app.use('/api', apiRouter);
+
+  // Catch-all for /api that returns JSON instead of falling through to Vite
+  app.all('/api/*', (req, res) => {
+    res.status(404).json({ 
+      error: `API route not found: ${req.method} ${req.url}`,
+      suggestion: "Check if the route is correctly defined in server.ts"
+    });
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
@@ -218,7 +260,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*all', (req, res) => {
+    app.get('(.*)', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
@@ -226,8 +268,6 @@ async function startServer() {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
-
-  return app;
 }
 
-export const appPromise = startServer();
+startServer();

@@ -82,6 +82,7 @@ const Profile: React.FC = () => {
 
   const handleLogout = async () => {
     try {
+      sessionStorage.removeItem('2fa_verified');
       await signOut(auth);
     } catch (error) {
       console.error("Logout error:", error);
