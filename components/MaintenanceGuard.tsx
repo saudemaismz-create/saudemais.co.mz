@@ -22,8 +22,6 @@ export const MaintenanceGuard: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => unsubscribe();
   }, []);
 
-  if (loading) return null;
-
   if (maintenanceMode) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-center">
