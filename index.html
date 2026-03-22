@@ -35,6 +35,20 @@
 </head>
 <body>
     <div id="root"></div>
-<script type="module" src="./index.tsx"></script>
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            var root = document.getElementById('root');
+            if (root && root.innerHTML === '') {
+                root.innerHTML = '<div style="padding: 20px; color: #e11d48; font-family: sans-serif;">' +
+                    '<h2>Erro de Inicialização</h2>' +
+                    '<p>' + msg + '</p>' +
+                    '<p><small>' + url + ' L:' + line + ' C:' + col + '</small></p>' +
+                    '<button onclick="location.reload()" style="margin-top: 10px; padding: 8px 16px; background: #0d9488; color: white; border: none; border-radius: 4px; cursor: pointer;">Recarregar</button>' +
+                    '</div>';
+            }
+            return false;
+        };
+    </script>
+    <script type="module" src="./index.tsx"></script>
 </body>
 </html>

@@ -10,9 +10,5 @@ if (!rootElement) {
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(
-  <div style={{ padding: '20px', textAlign: 'center' }}>
-    <h1>Saúde Mais</h1>
-    <p>Se estiver a ver esta mensagem, o sistema de renderização básico está a funcionar.</p>
-    <button onClick={() => window.location.reload()}>Recarregar</button>
-  </div>
+  <App />
 );
