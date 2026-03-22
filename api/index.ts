@@ -4,6 +4,8 @@ import path from 'path';
 import axios from 'axios';
 import cors from 'cors';
 
+console.log('[SERVER] api/index.ts is being executed...');
+
 const app = express();
 const PORT = 3000;
 
@@ -23,13 +25,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// API Router
+const apiRouter = express.Router();
+
 // Health check
-app.get("/api/health", (req, res) => {
+apiRouter.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
 // Payment Status check
-app.get("/api/payment/status", (req, res) => {
+apiRouter.get("/payment/status", (req, res) => {
   const hasToken = !!process.env.PAYMENT_GATEWAY_TOKEN;
   res.json({ 
     configured: hasToken,
@@ -39,7 +44,7 @@ app.get("/api/payment/status", (req, res) => {
 });
 
 // Payment API Route
-app.post('/api/payment/initiate', async (req, res) => {
+apiRouter.post('/payment/initiate', async (req, res) => {
   const { amount, phone, provider, orderId } = req.body;
   const apiKey = process.env.PAYMENT_GATEWAY_TOKEN;
 
@@ -93,6 +98,9 @@ app.post('/api/payment/initiate', async (req, res) => {
     });
   }
 });
+
+// Use API Router
+app.use('/api', apiRouter);
 
 // Catch-all for /api that returns JSON instead of falling through to Vite/Static
 app.all('/api/*', (req, res) => {
