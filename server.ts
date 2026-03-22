@@ -34,9 +34,10 @@ async function startServer() {
   // 2FA: Send Code
   apiRouter.post(['/auth/send-2fa', '/auth/send-2fa/'], async (req, res) => {
     try {
-      const { email } = req.body;
-      if (!email) return res.status(400).json({ error: 'Email é obrigatório' });
+      const { email: rawEmail } = req.body;
+      if (!rawEmail) return res.status(400).json({ error: 'Email é obrigatório' });
 
+      const email = rawEmail.toLowerCase().trim();
       console.log(`[2FA] Request to send code to: ${email}`);
       
       // Bypass for test user
@@ -153,22 +154,31 @@ async function startServer() {
 
   // 2FA: Verify Code
   apiRouter.post(['/auth/verify-2fa', '/auth/verify-2fa/'], (req, res) => {
-    const { email, code } = req.body;
-    if (!email || !code) return res.status(400).json({ error: 'Email e código são obrigatórios' });
+    const { email: rawEmail, code } = req.body;
+    if (!rawEmail || !code) return res.status(400).json({ error: 'Email e código são obrigatórios' });
+
+    const email = rawEmail.toLowerCase().trim();
+    console.log(`[2FA] Verifying code for ${email}: ${code}`);
 
     const stored = tfaCodes.get(email);
-    if (!stored) return res.status(400).json({ error: 'Código não encontrado ou expirado' });
+    if (!stored) {
+      console.warn(`[2FA] No code found in memory for ${email}`);
+      return res.status(400).json({ error: 'Código não encontrado ou expirado. Por favor, solicite um novo código.' });
+    }
 
     if (Date.now() > stored.expires) {
+      console.warn(`[2FA] Code expired for ${email}`);
       tfaCodes.delete(email);
-      return res.status(400).json({ error: 'Código expirado' });
+      return res.status(400).json({ error: 'Código expirado. Por favor, solicite um novo código.' });
     }
 
     if (stored.code === code) {
+      console.log(`[2FA] Code verified successfully for ${email}`);
       tfaCodes.delete(email);
       return res.json({ success: true });
     } else {
-      return res.status(400).json({ error: 'Código inválido' });
+      console.warn(`[2FA] Invalid code attempt for ${email}: expected ${stored.code}, got ${code}`);
+      return res.status(400).json({ error: 'Código inválido. Verifique o código enviado ao seu email.' });
     }
   });
 

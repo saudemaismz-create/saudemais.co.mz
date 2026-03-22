@@ -36,38 +36,52 @@ const Login: React.FC = () => {
   const [email2FALoading, setEmail2FALoading] = useState(false);
   const [isSimulation, setIsSimulation] = useState(false);
   const [simulatedCode, setSimulatedCode] = useState('');
+  const [hasAttempted2FA, setHasAttempted2FA] = useState(false);
+  const isTriggering2FA = React.useRef(false);
 
   useEffect(() => {
     const is2FAVerified = sessionStorage.getItem('2fa_verified') === 'true';
     if (isAuthReady && user) {
       if (is2FAVerified) {
         navigate('/app');
-      } else if (!showEmail2FA && !mfaResolver) {
+      } else if (!showEmail2FA && !mfaResolver && !isTriggering2FA.current && !hasAttempted2FA) {
         // If logged in but not verified, and not already showing 2FA, trigger it
         const trigger2FA = async () => {
+          if (isTriggering2FA.current) return;
+          isTriggering2FA.current = true;
           try {
             console.log("[2FA] Auto-triggering 2FA for:", user.email);
+            const userEmail = user.email?.toLowerCase().trim() || '';
+            if (!userEmail) {
+              console.warn("[2FA] User email is empty, skipping auto-trigger");
+              isTriggering2FA.current = false;
+              return;
+            }
+
             const data = await fetchJSON('/api/auth/send-2fa', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: user.email })
+              body: JSON.stringify({ email: userEmail })
             });
             
             setIsSimulation(!!data.simulation);
             if (data.simulation && data.code) {
               setSimulatedCode(data.code);
             }
-            setEmail(user.email || '');
+            setEmail(userEmail);
             setShowEmail2FA(true);
+            setHasAttempted2FA(true);
           } catch (err: any) {
             console.error("Auto-trigger 2FA error:", err);
-            setError(err.message);
+            setError(`Erro ao enviar código de verificação: ${err.message}`);
+          } finally {
+            isTriggering2FA.current = false;
           }
         };
         trigger2FA();
       }
     }
-  }, [user, isAuthReady, navigate, showEmail2FA, mfaResolver]);
+  }, [user, isAuthReady, navigate, showEmail2FA, mfaResolver, hasAttempted2FA]);
 
   if (!isAuthReady) {
     return (
@@ -153,10 +167,13 @@ const Login: React.FC = () => {
     setEmail2FALoading(true);
     setError('');
     try {
-      const data = await fetchJSON('/api/auth/verify-2fa', {
+      const normalizedEmail = email.toLowerCase().trim();
+      if (!normalizedEmail) throw new Error('Email não encontrado. Por favor, faça login novamente.');
+
+      await fetchJSON('/api/auth/verify-2fa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: email2FACode })
+        body: JSON.stringify({ email: normalizedEmail, code: email2FACode })
       });
 
       sessionStorage.setItem('2fa_verified', 'true');
@@ -175,20 +192,33 @@ const Login: React.FC = () => {
 
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        const normalizedEmail = email.toLowerCase().trim();
+        await signInWithEmailAndPassword(auth, normalizedEmail, password);
         
         // After successful login, initiate Email 2FA
-        const data = await fetchJSON('/api/auth/send-2fa', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email })
-        });
+        // Set triggering ref to true to prevent useEffect from double-triggering
+        isTriggering2FA.current = true;
+        
+        try {
+          const data = await fetchJSON('/api/auth/send-2fa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: normalizedEmail })
+          });
 
-        setIsSimulation(!!data.simulation);
-        if (data.simulation && data.code) {
-          setSimulatedCode(data.code);
+          setIsSimulation(!!data.simulation);
+          if (data.simulation && data.code) {
+            setSimulatedCode(data.code);
+          }
+          setEmail(normalizedEmail);
+          setShowEmail2FA(true);
+          setHasAttempted2FA(true);
+        } catch (apiErr: any) {
+          console.error("2FA API error:", apiErr);
+          setError(`Erro ao iniciar verificação de dois fatores: ${apiErr.message}`);
+        } finally {
+          isTriggering2FA.current = false;
         }
-        setShowEmail2FA(true);
       } else {
         // Validation for registration
         if (!name || !email || !phone || !password) {
@@ -414,16 +444,13 @@ const Login: React.FC = () => {
                     setEmail2FALoading(true);
                     setError('');
                     try {
-                      const response = await fetch('/api/auth/send-2fa', {
+                      const normalizedEmail = email.toLowerCase().trim();
+                      const data = await fetchJSON('/api/auth/send-2fa', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email })
+                        body: JSON.stringify({ email: normalizedEmail })
                       });
-                      if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.error || 'Falha ao reenviar código.');
-                      }
-                      const data = await response.json();
+                      
                       setIsSimulation(!!data.simulation);
                       if (data.simulation && data.code) {
                         setSimulatedCode(data.code);
@@ -445,6 +472,7 @@ const Login: React.FC = () => {
                     setShowEmail2FA(false);
                     setEmail2FACode('');
                     setError('');
+                    setHasAttempted2FA(false);
                   }}
                   className="w-full flex justify-center items-center py-3 px-4 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 bg-white hover:bg-slate-50 transition-all"
                 >
