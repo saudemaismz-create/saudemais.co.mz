@@ -131,9 +131,30 @@ const startServer = async () => {
   } else if (process.env.VERCEL !== '1') {
     console.log('[SERVER] Starting in production mode serving static files...');
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('(.*)', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    
+    // Serve static files from dist
+    app.use(express.static(distPath, {
+      maxAge: '1d',
+      etag: true
+    }));
+
+    // SPA Fallback: Only serve index.html for non-file requests
+    app.get('*', (req, res, next) => {
+      // Skip if it's an API call
+      if (req.path.startsWith('/api')) return next();
+      
+      // Skip if the path looks like a file (has an extension)
+      // This prevents returning index.html for missing .js/.css files
+      if (req.path.includes('.') && !req.path.endsWith('.html')) {
+        return res.status(404).send('Not found');
+      }
+
+      res.sendFile(path.join(distPath, 'index.html'), (err) => {
+        if (err) {
+          console.error('[SERVER] Error sending index.html:', err);
+          res.status(500).send('Internal Server Error');
+        }
+      });
     });
   }
 
