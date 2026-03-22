@@ -1,6 +1,5 @@
 
 import express from 'express';
-import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import axios from 'axios';
 import nodemailer from 'nodemailer';
@@ -8,7 +7,6 @@ import { Resend } from 'resend';
 import cors from 'cors';
 
 // In-memory store for 2FA codes (for demo purposes)
-// In a real app, use Redis or a database with expiration
 const tfaCodes = new Map<string, { code: string, expires: number }>();
 
 const app = express();
@@ -256,13 +254,16 @@ app.all('/api/*', (req, res) => {
 
 // Vite middleware for development
 if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {
-  createViteServer({
-    server: { middlewareMode: true },
-    appType: 'spa',
-  }).then(vite => {
-    app.use(vite.middlewares);
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+  // Dynamic import to avoid crash on Vercel
+  import('vite').then(({ createServer: createViteServer }) => {
+    createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    }).then(vite => {
+      app.use(vite.middlewares);
+      app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+      });
     });
   });
 } else if (process.env.VERCEL !== '1') {
