@@ -18,47 +18,29 @@ export default defineConfig(({ mode }) => {
           registerType: 'autoUpdate',
           includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
           manifest: {
-            name: 'Saúde Mais - Farmácia Online',
+            name: 'Saúde Mais',
             short_name: 'SaúdeMais',
-            description: 'A maior plataforma digital de saúde em Moçambique. Encontre farmácias, compre medicamentos e consulte a nossa IA.',
-            theme_color: '#0d9488',
+            description: 'Marketplace de Saúde e Farmácias em Moçambique',
+            theme_color: '#0d9488', // teal-600
             background_color: '#ffffff',
             display: 'standalone',
             orientation: 'portrait',
-            categories: ['medical', 'health', 'shopping'],
-            lang: 'pt-MZ',
             icons: [
               {
-                src: 'https://img.icons8.com/fluency/192/health-book.png',
+                src: 'https://picsum.photos/seed/saudemais/192/192',
                 sizes: '192x192',
                 type: 'image/png'
               },
               {
-                src: 'https://img.icons8.com/fluency/512/health-book.png',
+                src: 'https://picsum.photos/seed/saudemais/512/512',
                 sizes: '512x512',
                 type: 'image/png'
               },
               {
-                src: 'https://img.icons8.com/fluency/512/health-book.png',
+                src: 'https://picsum.photos/seed/saudemais/512/512',
                 sizes: '512x512',
                 type: 'image/png',
                 purpose: 'any maskable'
-              }
-            ],
-            screenshots: [
-              {
-                src: 'https://picsum.photos/seed/saudemais1/1080/1920',
-                sizes: '1080x1920',
-                type: 'image/png',
-                form_factor: 'narrow',
-                label: 'Dashboard de Saúde'
-              },
-              {
-                src: 'https://picsum.photos/seed/saudemais2/1920/1080',
-                sizes: '1920x1080',
-                type: 'image/png',
-                form_factor: 'wide',
-                label: 'Marketplace de Medicamentos'
               }
             ]
           }

@@ -25,8 +25,6 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Order } from '../types';
 import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHandler';
 
-import { fetchJSON } from '../utils/api';
-
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const { items, total, removeItem, updateQuantity, clearCart } = useCart();
@@ -62,25 +60,14 @@ const Checkout: React.FC = () => {
       return;
     }
 
-    if (formData.phone.length < 9) {
-      setError('Por favor, insira um número de telefone válido para o pagamento.');
-      return;
-    }
-
-    if (formData.address.length < 5) {
-      setError('Por favor, insira um endereço de entrega completo.');
-      return;
-    }
-
     setLoading(true);
     setError(null);
     setIsProcessingPayment(true);
     setPaymentStatus('waiting');
 
     try {
-      console.log('[Checkout] Initiating payment for order:', total);
       // 1. Initiate Payment via Server
-      const paymentData = await fetchJSON('/api/payment/initiate', {
+      const paymentResponse = await fetch('/api/payment/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -91,15 +78,22 @@ const Checkout: React.FC = () => {
         })
       });
 
-      console.log('[Checkout] Payment initiated:', paymentData);
+      if (!paymentResponse.ok) {
+        throw new Error('Falha ao iniciar o pagamento.');
+      }
+
+      const paymentData = await paymentResponse.json();
+      
+      if (!paymentData.success) {
+        throw new Error(paymentData.error || 'Erro no pagamento.');
+      }
 
       // 2. Simulate waiting for USSD confirmation (C2B flow)
       // In a real app, you would poll the status or wait for a webhook
       await new Promise(resolve => setTimeout(resolve, 4500));
 
-      console.log('[Checkout] Creating order in Firestore...');
       const orderData: Omit<Order, 'id'> = {
-        customerName: profile?.name || user.displayName || 'Cliente',
+        customerName: profile.name,
         customerUid: user.uid,
         items: items,
         total: total,
@@ -107,12 +101,11 @@ const Checkout: React.FC = () => {
         createdAt: serverTimestamp(),
         address: formData.address,
         phone: formData.phone,
-        paymentMethod: formData.paymentMethod as any,
+        paymentMethod: formData.paymentMethod,
         pharmacyIds: Array.from(new Set(items.map(i => i.pharmacyId).filter(Boolean))) as string[]
       };
 
       const docRef = await addDoc(collection(db, 'orders'), orderData);
-      console.log('[Checkout] Order created with ID:', docRef.id);
       setOrderId(docRef.id);
       
       setPaymentStatus('success');
@@ -123,22 +116,8 @@ const Checkout: React.FC = () => {
       clearCart();
     } catch (err) {
       setPaymentStatus('error');
-      console.error('[Checkout] Error processing order:', err);
-      if (err instanceof Error) {
-        try {
-          const parsedError = JSON.parse(err.message);
-          if (parsedError.error && parsedError.error.includes('insufficient permissions')) {
-            setError('Erro de permissão no Firestore. Verifique as regras de segurança.');
-          } else {
-            setError(`Erro: ${parsedError.error || err.message}`);
-          }
-        } catch {
-          setError(`Erro: ${err.message}`);
-        }
-      } else {
-        setError('Ocorreu um erro ao processar seu pedido. Tente novamente.');
-      }
       handleFirestoreError(err, OperationType.WRITE, 'orders');
+      setError('Ocorreu um erro ao processar seu pedido. Tente novamente.');
     } finally {
       setLoading(false);
       setIsProcessingPayment(false);
@@ -253,21 +232,12 @@ const Checkout: React.FC = () => {
                 </div>
                 <div className="flex justify-between text-slate-500 font-bold">
                   <span>Entrega</span>
-                  {total >= 500 ? (
-                    <span className="text-teal-600">Grátis</span>
-                  ) : (
-                    <span>{(150).toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' })}</span>
-                  )}
+                  <span className="text-teal-600">Grátis</span>
                 </div>
-                {total < 500 && (
-                  <p className="text-[10px] text-teal-600 font-black uppercase tracking-widest mt-2">
-                    Adicione mais {(500 - total).toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' })} para entrega grátis!
-                  </p>
-                )}
                 <div className="pt-4 border-t border-slate-100 flex justify-between items-end">
                   <span className="text-slate-900 font-black">Total</span>
                   <span className="text-3xl font-black text-teal-600 tracking-tighter">
-                    {(total >= 500 ? total : total + 150).toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' })}
+                    {total.toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' })}
                   </span>
                 </div>
               </div>
@@ -427,7 +397,7 @@ const Checkout: React.FC = () => {
                     <div className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl">M</div>
                     <span className="font-black text-slate-900">M-Pesa</span>
                   </button>
- 
+
                   <button 
                     onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'emola' }))}
                     className={`p-8 rounded-[2.5rem] border-4 transition-all flex flex-col items-center gap-4 ${
@@ -441,21 +411,6 @@ const Checkout: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="relative">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-2 block">Número da Carteira Móvel (M-Pesa/e-Mola)</label>
-                  <div className="relative">
-                    <Smartphone className="absolute left-5 top-1/2 -translate-y-1/2 text-teal-600" size={20} />
-                    <input 
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="84 XXX XXXX ou 86 XXX XXXX"
-                      className="w-full pl-14 pr-6 py-5 bg-slate-50 border-none rounded-[2rem] font-bold text-slate-900 placeholder:text-slate-300 focus:ring-2 focus:ring-teal-500 transition-all"
-                    />
-                  </div>
-                </div>
- 
                 <div className="p-6 bg-amber-50 rounded-3xl border border-amber-100 flex gap-4">
                   <AlertCircle className="text-amber-600 flex-shrink-0" size={24} />
                   <p className="text-amber-900 text-sm font-bold leading-relaxed">

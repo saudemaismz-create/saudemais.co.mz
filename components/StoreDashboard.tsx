@@ -26,13 +26,13 @@ import { useErrorBoundary } from 'react-error-boundary';
 import { GoogleGenAI } from "@google/genai";
 
 const SALES_DATA = [
-  { name: 'Seg', sales: 0, orders: 0 },
-  { name: 'Ter', sales: 0, orders: 0 },
-  { name: 'Qua', sales: 0, orders: 0 },
-  { name: 'Qui', sales: 0, orders: 0 },
-  { name: 'Sex', sales: 0, orders: 0 },
-  { name: 'Sáb', sales: 0, orders: 0 },
-  { name: 'Dom', sales: 0, orders: 0 },
+  { name: 'Seg', sales: 4000, orders: 24 },
+  { name: 'Ter', sales: 3000, orders: 18 },
+  { name: 'Qua', sales: 2000, orders: 15 },
+  { name: 'Qui', sales: 2780, orders: 20 },
+  { name: 'Sex', sales: 1890, orders: 12 },
+  { name: 'Sáb', sales: 2390, orders: 16 },
+  { name: 'Dom', sales: 3490, orders: 22 },
 ];
 
 const StoreDashboard: React.FC = () => {
@@ -507,13 +507,8 @@ const StoreDashboard: React.FC = () => {
       <div className="bg-white border-b border-slate-100 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-1">
-              <img 
-                src="https://img.icons8.com/fluency/48/health-book.png" 
-                alt="Logo" 
-                className="w-10 h-10"
-                referrerPolicy="no-referrer"
-              />
+            <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-slate-50 shadow-sm">
+              <img src={myPharmacy?.image} alt={myPharmacy?.name} className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="text-xl font-black text-slate-900 tracking-tight">{myPharmacy?.name}</h1>

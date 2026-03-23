@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, MessageSquare, User, Calendar, MapPin, Heart, ShoppingBag, ShoppingCart, ShieldAlert, FileText, Bell, Users } from 'lucide-react';
+import { Home, Search, MessageSquare, User, Calendar, MapPin, Heart, ShoppingBag, ShoppingCart, ShieldAlert } from 'lucide-react';
 import { useCart } from './CartContext';
 import { useFirebase } from './FirebaseProvider';
 
@@ -19,11 +19,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const navItems = [
     { icon: Home, label: 'Início', path: '/app' },
+    { icon: Search, label: 'Buscar', path: '/app/search' },
     { icon: MessageSquare, label: 'IA+', path: '/app/assistant' },
-    { icon: FileText, label: 'Receitas', path: '/app/prescriptions' },
-    { icon: Bell, label: 'Lembretes', path: '/app/reminders' },
-    { icon: Users, label: 'Família', path: '/app/family' },
-    { icon: MessageSquare, label: 'Chat', path: '/app/chat' },
     { icon: ShoppingBag, label: 'Minha Loja', path: '/app/pharmacy-panel' },
     { icon: Calendar, label: 'Agenda', path: '/app/bookings' },
     { icon: User, label: 'Perfil', path: '/app/profile' },
@@ -40,20 +37,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 pb-20 md:pb-0 md:pl-64">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-100 h-screen fixed left-0 top-0 p-6 overflow-y-auto">
-        <div className="flex items-center gap-3 mb-10 px-2 shrink-0">
-          <div className="p-1">
-            <img 
-              src="https://img.icons8.com/fluency/48/health-book.png" 
-              alt="Logo" 
-              className="w-10 h-10"
-              referrerPolicy="no-referrer"
-            />
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-100 h-screen fixed left-0 top-0 p-6">
+        <div className="flex items-center gap-3 mb-10 px-2">
+          <div className="bg-teal-600 p-2.5 rounded-2xl text-white shadow-lg shadow-teal-100">
+            <Heart size={24} fill="white" />
           </div>
           <span className="text-2xl font-black text-slate-900 tracking-tighter">Saúde <span className="text-teal-600">Mais</span></span>
         </div>
         
-        <nav className="flex-1 space-y-3 pb-10">
+        <nav className="flex-1 space-y-3">
           {navItems.map((item) => (
             <button
               key={item.path}
@@ -105,13 +97,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Mobile Header */}
       <header className="md:hidden flex items-center justify-between px-6 py-5 bg-white border-b border-slate-100 sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="p-1">
-            <img 
-              src="https://img.icons8.com/fluency/48/health-book.png" 
-              alt="Logo" 
-              className="w-8 h-8"
-              referrerPolicy="no-referrer"
-            />
+          <div className="bg-teal-600 p-2 rounded-xl text-white shadow-md">
+            <Heart size={18} fill="white" />
           </div>
           <span className="text-xl font-black text-slate-900 tracking-tighter">Saúde Mais</span>
         </div>

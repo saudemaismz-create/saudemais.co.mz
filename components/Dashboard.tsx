@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, Search, MapPin, Pill, Activity, ShieldCheck, Calendar, Bell, Newspaper, ExternalLink, ShoppingBag, ShoppingCart, Plus, MessageSquare, Sparkles as SparklesIcon, X, Droplets, Heart, Moon, Footprints, Truck, FileText, Users } from 'lucide-react';
+import { TrendingUp, Search, MapPin, Pill, Activity, ShieldCheck, Calendar, Bell, Newspaper, ExternalLink, ShoppingBag, ShoppingCart, Plus, MessageSquare, Sparkles as SparklesIcon, X, Droplets, Heart, Moon, Footprints } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getHealthNews } from '../services/geminiService';
@@ -13,8 +13,8 @@ import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHand
 import { useErrorBoundary } from 'react-error-boundary';
 
 const activityData = [
-  { name: 'Seg', val: 0 }, { name: 'Ter', val: 0 }, { name: 'Qua', val: 0 },
-  { name: 'Qui', val: 0 }, { name: 'Sex', val: 0 }, { name: 'Sab', val: 0 }, { name: 'Dom', val: 0 },
+  { name: 'Seg', val: 65 }, { name: 'Ter', val: 72 }, { name: 'Qua', val: 68 },
+  { name: 'Qui', val: 80 }, { name: 'Sex', val: 75 }, { name: 'Sab', val: 85 }, { name: 'Dom', val: 82 },
 ];
 
 const Dashboard: React.FC = () => {
@@ -37,10 +37,10 @@ const Dashboard: React.FC = () => {
   });
   
   const [liveMetrics, setLiveMetrics] = useState({
-    heartRate: 0,
-    hydration: 0,
-    sleep: 0, // minutes
-    steps: 0
+    heartRate: 72,
+    hydration: 1.2,
+    sleep: 440, // minutes
+    steps: 3432
   });
 
   // Calculate goals based on health data
@@ -52,8 +52,28 @@ const Dashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    // Simulation intervals removed to ensure new users find an empty state
-    return () => {};
+    // Simulate live metrics updating
+    const hrInterval = setInterval(() => {
+      setLiveMetrics(prev => {
+        const change = Math.floor(Math.random() * 5) - 2;
+        let newHr = prev.heartRate + change;
+        if (newHr < 60) newHr = 60;
+        if (newHr > 100) newHr = 100;
+        return { ...prev, heartRate: newHr };
+      });
+    }, 3000);
+
+    const stepsInterval = setInterval(() => {
+      setLiveMetrics(prev => ({
+        ...prev,
+        steps: prev.steps + Math.floor(Math.random() * 3)
+      }));
+    }, 5000);
+
+    return () => {
+      clearInterval(hrInterval);
+      clearInterval(stepsInterval);
+    };
   }, []);
 
   const formatSleep = (mins: number) => {
@@ -62,44 +82,28 @@ const Dashboard: React.FC = () => {
     return `${h}h ${m}m`;
   };
 
-  const [notifications, setNotifications] = useState([
-    { 
-      id: '1', 
-      title: 'Entrega em Caminho', 
-      message: 'O seu pedido #8821 está em trânsito e chegará em breve.', 
-      time: '10 min', 
-      read: false, 
-      icon: Truck, 
-      bg: 'bg-blue-50', 
-      color: 'text-blue-600' 
+  const notifications = [
+    {
+      id: 1,
+      title: 'Resumo Diário',
+      message: `Você deu ${liveMetrics.steps.toLocaleString()} passos hoje e dormiu ${formatSleep(liveMetrics.sleep)}. Continue assim!`,
+      time: 'Agora mesmo',
+      read: false,
+      icon: TrendingUp,
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50'
     },
-    { 
-      id: '2', 
-      title: 'Dica de Saúde', 
-      message: 'Lembre-se de beber pelo menos 2L de água hoje.', 
-      time: '2h', 
-      read: false, 
-      icon: Droplets, 
-      bg: 'bg-teal-50', 
-      color: 'text-teal-600' 
-    },
-    { 
-      id: '3', 
-      title: 'Consulta Agendada', 
-      message: 'Sua consulta com Dr. Silva é amanhã às 09:00.', 
-      time: '5h', 
-      read: true, 
-      icon: Calendar, 
-      bg: 'bg-indigo-50', 
-      color: 'text-indigo-600' 
+    {
+      id: 2,
+      title: 'Hidratação',
+      message: `Lembre-se de beber água! Você atingiu ${(liveMetrics.hydration / goals.hydration * 100).toFixed(0)}% da sua meta.`,
+      time: 'Há 2 horas',
+      read: true,
+      icon: Droplets,
+      color: 'text-blue-600',
+      bg: 'bg-blue-50'
     }
-  ]);
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
-  };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
+  ];
 
   useEffect(() => {
     getHealthNews().then(setNews);
@@ -173,19 +177,9 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 pb-10">
       <section className="flex items-center justify-between relative">
-        <div className="flex items-center gap-3">
-          <div className="p-1">
-            <img 
-              src="https://img.icons8.com/fluency/48/health-book.png" 
-              alt="Logo" 
-              className="w-10 h-10"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Saúde <span className="text-teal-600">Mais</span></h1>
-            <p className="text-slate-500 font-medium text-sm md:text-base">Kanimambo, {profile?.name?.split(' ')[0] || 'Visitante'}. Como se sente hoje?</p>
-          </div>
+        <div>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Saúde <span className="text-teal-600">Mais</span></h1>
+          <p className="text-slate-500 font-medium text-sm md:text-base">Kanimambo, {profile?.name?.split(' ')[0] || 'Visitante'}. Como se sente hoje?</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Cart Icon */}
@@ -208,9 +202,7 @@ const Dashboard: React.FC = () => {
               className="relative p-2.5 bg-white rounded-2xl border border-slate-100 text-slate-400 hover:text-teal-600 transition-all hover:shadow-lg shadow-sm"
             >
               <Bell size={24} />
-              {unreadCount > 0 && (
-                <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 border-2 border-white rounded-full"></span>
-              )}
+              <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 border-2 border-white rounded-full"></span>
             </button>
 
             {/* Notifications Dropdown */}
@@ -218,9 +210,7 @@ const Dashboard: React.FC = () => {
               <div className="absolute right-0 mt-3 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
                 <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                   <h3 className="font-bold text-slate-800">Notificações</h3>
-                  {unreadCount > 0 && (
-                    <span className="text-xs font-black text-teal-600 bg-teal-100 px-2 py-1 rounded-full">{unreadCount} Novas</span>
-                  )}
+                  <span className="text-xs font-black text-teal-600 bg-teal-100 px-2 py-1 rounded-full">1 Nova</span>
                 </div>
                 <div className="max-h-96 overflow-y-auto">
                   {notifications.map(notif => (
@@ -240,10 +230,8 @@ const Dashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
-                <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-4">
-                  <button onClick={markAllAsRead} className="text-xs font-bold text-teal-600 hover:text-teal-700">Marcar todas como lidas</button>
-                  <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
-                  <button onClick={() => navigate('/app/notifications')} className="text-xs font-bold text-slate-500 hover:text-slate-700">Ver todas</button>
+                <div className="p-3 bg-slate-50 border-t border-slate-100 text-center">
+                  <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="text-xs font-bold text-teal-600 hover:text-teal-700">Marcar todas como lidas</button>
                 </div>
               </div>
             )}
@@ -335,36 +323,6 @@ const Dashboard: React.FC = () => {
         </section>
       )}
 
-      {/* Health Services Quick Access */}
-      <section>
-        <div className="flex items-center justify-between mb-4 px-1">
-          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <ShieldCheck className="text-teal-600" size={22} />
-            Serviços de Saúde
-          </h2>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: 'Receitas', icon: FileText, path: '/app/prescriptions', color: 'text-teal-600', bg: 'bg-teal-50', desc: 'Gerir receitas' },
-            { label: 'Lembretes', icon: Bell, path: '/app/reminders', color: 'text-orange-600', bg: 'bg-orange-50', desc: 'Alertas de medicação' },
-            { label: 'Família', icon: Users, path: '/app/family', color: 'text-indigo-600', bg: 'bg-indigo-50', desc: 'Perfis dependentes' },
-            { label: 'Chat', icon: MessageSquare, path: '/app/chat', color: 'text-rose-600', bg: 'bg-rose-50', desc: 'Falar com farmácia' },
-          ].map((service, i) => (
-            <button
-              key={i}
-              onClick={() => navigate(service.path)}
-              className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center text-center gap-2 hover:border-teal-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-500 group"
-            >
-              <div className={`${service.bg} ${service.color} w-14 h-14 rounded-2xl flex items-center justify-center mb-1 shadow-inner group-hover:scale-110 transition-transform`}>
-                <service.icon size={28} strokeWidth={2.5} />
-              </div>
-              <span className="text-sm font-black text-slate-800 tracking-tight">{service.label}</span>
-              <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{service.desc}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
       {/* Vitals Summary - Improved with gradients and hover effects */}
       <section>
         <div className="flex items-center justify-between mb-4 px-1">
@@ -401,17 +359,12 @@ const Dashboard: React.FC = () => {
 
       {/* NEW: Featured Medications Section (CENTRAL) */}
       <section>
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-5 px-1 gap-2">
-          <div>
-            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-              <SparklesIcon className="text-teal-600" size={22} />
-              Produtos Patrocinados
-            </h2>
-            <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest mt-1 flex items-center gap-1">
-              <Truck size={12} /> Entregas grátis em Maputo e Matola acima de 500 MT
-            </p>
-          </div>
-          <button onClick={() => navigate('/app/search')} className="text-teal-600 text-sm font-bold hover:underline w-fit">
+        <div className="flex items-center justify-between mb-5 px-1">
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <SparklesIcon className="text-teal-600" size={22} />
+            Produtos Patrocinados
+          </h2>
+          <button onClick={() => navigate('/app/search')} className="text-teal-600 text-sm font-bold hover:underline">
             Ver Catálogo
           </button>
         </div>
@@ -493,27 +446,15 @@ const Dashboard: React.FC = () => {
 
         {/* Real-time Health News via Gemini */}
         <div className="bg-white border border-slate-100 p-6 rounded-3xl shadow-sm overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <Newspaper className="text-orange-500" size={20} />
-              Notícias Locais
-            </h3>
-            <button 
-              onClick={() => {
-                setNews({ text: 'Atualizando notícias...', links: [] });
-                getHealthNews(true).then(setNews);
-              }}
-              className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-teal-600 transition-colors"
-              title="Atualizar Notícias"
-            >
-              <Activity size={16} />
-            </button>
-          </div>
+          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
+            <Newspaper className="text-orange-500" size={20} />
+            Notícias Locais
+          </h3>
           <div className="flex-1 space-y-4 overflow-y-auto pr-2 max-h-[240px] text-sm text-slate-600 leading-relaxed">
             {news.text.split('\n').map((line, i) => line && <p key={i} className="pb-3 border-b border-slate-50 last:border-0">{line}</p>)}
           </div>
           <div className="mt-4 pt-4 border-t border-slate-50 space-y-2">
-            {news.links.slice(0, 3).map((link: any, i: number) => (
+            {news.links.slice(0, 2).map((link: any, i: number) => (
               <a key={i} href={link.uri} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-xs text-teal-600 font-bold hover:text-teal-700">
                 <ExternalLink size={12} /> {link.title || 'Ver fonte da notícia'}
               </a>

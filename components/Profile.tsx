@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { User, Shield, Bell, History, LogOut, ChevronRight, Activity, Droplets, Ruler, Weight, LogIn, Package, Clock, CheckCircle2, AlertCircle, Truck, Calendar, ShoppingBag } from 'lucide-react';
+import { User, Shield, Bell, History, LogOut, ChevronRight, Activity, Droplets, Ruler, Weight, LogIn, Package, Clock, CheckCircle2, AlertCircle, Truck, Calendar } from 'lucide-react';
 import { useFirebase } from './FirebaseProvider';
 import { auth, googleProvider, db } from '../firebase';
 import { signInWithPopup, signOut } from 'firebase/auth';
@@ -53,36 +53,8 @@ const Profile: React.FC = () => {
     }
   };
 
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setIsInstallable(true);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsInstallable(false);
-    }
-    setDeferredPrompt(null);
-  };
-
   const handleLogout = async () => {
     try {
-      sessionStorage.removeItem('2fa_verified');
       await signOut(auth);
     } catch (error) {
       console.error("Logout error:", error);
@@ -118,13 +90,8 @@ const Profile: React.FC = () => {
   if (!user) {
     return (
       <div className="max-w-md mx-auto bg-white p-10 rounded-[3rem] shadow-xl text-center border border-slate-100">
-        <div className="p-2 flex items-center justify-center mx-auto mb-6">
-          <img 
-            src="https://img.icons8.com/fluency/96/health-book.png" 
-            alt="Logo" 
-            className="w-16 h-16"
-            referrerPolicy="no-referrer"
-          />
+        <div className="w-20 h-20 bg-teal-50 text-teal-600 rounded-3xl flex items-center justify-center mx-auto mb-6">
+          <User size={40} />
         </div>
         <h2 className="text-2xl font-black text-slate-900 mb-4 italic">Perfil de Saúde</h2>
         <p className="text-slate-500 mb-8 font-medium">Faça login para aceder ao seu histórico de saúde, receitas e agendamentos.</p>
@@ -309,26 +276,6 @@ const Profile: React.FC = () => {
           </div>
         )}
       </div>
-
-      {isInstallable && (
-        <div className="bg-teal-600 rounded-3xl shadow-lg shadow-teal-100 overflow-hidden mb-6">
-          <button 
-            onClick={handleInstallClick}
-            className="w-full px-6 py-5 flex items-center justify-between hover:bg-teal-700 transition-colors group"
-          >
-            <div className="flex items-center gap-4">
-              <div className="text-white bg-white/20 p-3 rounded-2xl">
-                <ShoppingBag size={24} />
-              </div>
-              <div className="text-left">
-                <span className="font-black text-white block italic">Instalar Aplicativo</span>
-                <span className="text-xs text-teal-100 font-bold uppercase tracking-widest">Baixe para o seu telemóvel</span>
-              </div>
-            </div>
-            <ChevronRight size={20} className="text-white/50 group-hover:translate-x-1 transition-transform" />
-          </button>
-        </div>
-      )}
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-4 px-6 border-b border-slate-50 font-bold text-slate-800">Negócios</div>

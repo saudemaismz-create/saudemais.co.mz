@@ -135,78 +135,6 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["commissionRate", "featuredPharmacyFee", "sponsoredProductFee"]
-    },
-    "Prescription": {
-      "title": "Prescription",
-      "description": "A digital prescription uploaded by a user.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "imageUrl": { "type": "string" },
-        "status": { "type": "string", "enum": ["Pendente", "Aprovada", "Rejeitada"] },
-        "pharmacyId": { "type": "string", "description": "Optional: targeted pharmacy." },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "notes": { "type": "string" }
-      },
-      "required": ["userId", "imageUrl", "status", "createdAt"]
-    },
-    "MedicationReminder": {
-      "title": "MedicationReminder",
-      "description": "A reminder for taking medication.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "medicationName": { "type": "string" },
-        "dosage": { "type": "string" },
-        "frequency": { "type": "string", "description": "e.g., 8h, daily" },
-        "times": { "type": "array", "items": { "type": "string" }, "description": "Times of day (HH:mm)" },
-        "startDate": { "type": "string", "format": "date" },
-        "endDate": { "type": "string", "format": "date" },
-        "active": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["userId", "medicationName", "dosage", "times", "active"]
-    },
-    "FamilyMember": {
-      "title": "FamilyMember",
-      "description": "A dependent or family member managed by a user.",
-      "type": "object",
-      "properties": {
-        "ownerId": { "type": "string" },
-        "name": { "type": "string" },
-        "relationship": { "type": "string" },
-        "bloodType": { "type": "string" },
-        "weight": { "type": "number" },
-        "height": { "type": "number" },
-        "birthDate": { "type": "string", "format": "date" },
-        "photoUrl": { "type": "string" }
-      },
-      "required": ["ownerId", "name", "relationship"]
-    },
-    "ChatRoom": {
-      "title": "ChatRoom",
-      "description": "A chat room between a user and a pharmacy.",
-      "type": "object",
-      "properties": {
-        "participants": { "type": "array", "items": { "type": "string" } },
-        "lastMessage": { "type": "string" },
-        "updatedAt": { "type": "string", "format": "date-time" },
-        "pharmacyId": { "type": "string" },
-        "userId": { "type": "string" }
-      },
-      "required": ["participants", "updatedAt", "pharmacyId", "userId"]
-    },
-    "ChatMessage": {
-      "title": "ChatMessage",
-      "description": "A message in a chat room.",
-      "type": "object",
-      "properties": {
-        "roomId": { "type": "string" },
-        "senderId": { "type": "string" },
-        "text": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["roomId", "senderId", "text", "createdAt"]
     }
   },
   "firestore": {
@@ -241,26 +169,6 @@
     "/settings/{settingId}": {
       "schema": "Settings",
       "description": "Global settings."
-    },
-    "/prescriptions/{prescriptionId}": {
-      "schema": "Prescription",
-      "description": "User prescriptions."
-    },
-    "/reminders/{reminderId}": {
-      "schema": "MedicationReminder",
-      "description": "Medication reminders."
-    },
-    "/family/{memberId}": {
-      "schema": "FamilyMember",
-      "description": "Family members."
-    },
-    "/chat_rooms/{roomId}": {
-      "schema": "ChatRoom",
-      "description": "Chat rooms."
-    },
-    "/chat_messages/{messageId}": {
-      "schema": "ChatMessage",
-      "description": "Chat messages."
     }
   }
 }

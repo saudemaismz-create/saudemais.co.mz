@@ -56,69 +56,37 @@ export const getHealthAdvice = async (history: ChatMessage[], message: string): 
   }
 };
 
-export const getHealthNews = async (forceRefresh = false) => {
+export const getHealthNews = async () => {
   const CACHE_KEY = 'health_news_cache';
   const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
 
   try {
-    if (!forceRefresh) {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_DURATION) {
-          return data;
-        }
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        return data;
       }
     }
 
     const ai = getAI();
-    let response;
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: "Quais são as 3 notícias mais importantes de saúde pública hoje? Resuma cada uma em uma frase curta.",
+      config: {
+        tools: [{ googleSearch: {} }],
+      },
+    });
     
-    try {
-      // Primary attempt with Google Search grounding for real-time Mozambique news
-      response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: "Pesquise e liste as 3 notícias mais importantes e recentes de saúde pública em Moçambique hoje. Resuma cada uma em uma frase curta e informativa.",
-        config: {
-          tools: [{ googleSearch: {} }],
-        },
-      });
-    } catch (searchError) {
-      console.warn("Google Search grounding failed, falling back to general model knowledge:", searchError);
-      // Fallback to general knowledge if search tool fails (e.g., regional restriction or quota)
-      response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: "Quais são as notícias de saúde pública mais importantes e recentes em Moçambique? Liste as 3 principais e resuma cada uma em uma frase curta.",
-      });
-    }
-    
-    if (!response.text) {
-      throw new Error("O modelo retornou uma resposta vazia.");
-    }
-
     const result = {
       text: response.text,
-      links: response.candidates?.[0]?.groundingMetadata?.groundingChunks
-        ?.map((chunk: any) => chunk.web)
-        .filter(Boolean) || []
+      links: response.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk: any) => chunk.web).filter(Boolean) || []
     };
 
     localStorage.setItem(CACHE_KEY, JSON.stringify({ data: result, timestamp: Date.now() }));
     return result;
   } catch (error) {
-    console.error("Detailed News Error:", error);
-    
-    // Check if it's a configuration error
-    if (error instanceof Error && (error.message.includes("chave API") || error.message.includes("API key"))) {
-      return { 
-        text: "Configuração pendente: A chave API do Gemini não foi encontrada. Por favor, configure-a nas definições do projeto.", 
-        links: [] 
-      };
-    }
-
-    return { 
-      text: "Não foi possível carregar as notícias de saúde de Moçambique no momento. Por favor, tente novamente mais tarde.", 
-      links: [] 
-    };
+    console.error("News Error:", error);
+    return { text: "Não foi possível carregar as notícias agora.", links: [] };
   }
 };
