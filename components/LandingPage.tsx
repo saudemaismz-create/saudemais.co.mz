@@ -1,8 +1,8 @@
 
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Heart, ShieldCheck, Activity, Search, MessageSquare, ArrowRight, CheckCircle2, MapPin, Pill, Truck } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Heart, ShieldCheck, Activity, Search, MessageSquare, ArrowRight, CheckCircle2, MapPin, Pill } from 'lucide-react';
 import { useFirebase } from './FirebaseProvider';
 
 const LandingPage: React.FC = () => {
@@ -10,8 +10,7 @@ const LandingPage: React.FC = () => {
   const { user, isAuthReady } = useFirebase();
 
   useEffect(() => {
-    const is2FAVerified = sessionStorage.getItem('2fa_verified') === 'true';
-    if (isAuthReady && user && is2FAVerified) {
+    if (isAuthReady && user) {
       navigate('/app');
     }
   }, [user, isAuthReady, navigate]);
@@ -38,13 +37,8 @@ const LandingPage: React.FC = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="p-1">
-              <img 
-                src="https://img.icons8.com/fluency/48/health-book.png" 
-                alt="Logo" 
-                className="w-8 h-8"
-                referrerPolicy="no-referrer"
-              />
+            <div className="bg-teal-600 p-2 rounded-xl text-white shadow-md">
+              <Heart size={20} fill="white" />
             </div>
             <span className="text-2xl font-black text-slate-900 tracking-tighter">Saúde <span className="text-teal-600">Mais</span></span>
           </div>
@@ -54,14 +48,12 @@ const LandingPage: React.FC = () => {
             <a href="#about" className="hover:text-teal-600 transition-colors">Sobre Nós</a>
             <a href="#contact" className="hover:text-teal-600 transition-colors">Contacto</a>
           </div>
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={handleCTA}
-              className="px-6 py-2.5 bg-teal-600 text-white font-black rounded-xl shadow-lg shadow-teal-100 hover:scale-105 transition-transform active:scale-95"
-            >
-              {user ? 'Ir para a App' : 'Entrar na App'}
-            </button>
-          </div>
+          <button 
+            onClick={handleCTA}
+            className="px-6 py-2.5 bg-teal-600 text-white font-black rounded-xl shadow-lg shadow-teal-100 hover:scale-105 transition-transform active:scale-95"
+          >
+            {user ? 'Ir para a App' : 'Entrar na App'}
+          </button>
         </div>
       </nav>
 
@@ -91,20 +83,16 @@ const LandingPage: React.FC = () => {
                 <p className="text-xl text-slate-500 font-medium max-w-lg mb-10 leading-relaxed">
                   Conectamos pacientes a farmácias, médicos e diagnósticos inteligentes. Tudo o que precisa para cuidar da sua saúde, na palma da sua mão.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 items-center">
+                <div className="flex flex-col sm:flex-row gap-4">
                   <button 
                     onClick={handleCTA}
                     className="px-10 py-5 bg-slate-900 text-white font-black rounded-2xl shadow-2xl hover:bg-slate-800 transition-all flex items-center justify-center gap-3 group"
                   >
                     {user ? 'Acessar a App' : 'Começar Agora'} <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" />
                   </button>
-                  <div className="flex items-center gap-3 px-6 py-4 bg-teal-50 border border-teal-100 rounded-2xl">
-                    <Truck size={24} className="text-teal-600" />
-                    <div>
-                      <p className="text-[10px] font-black text-teal-700 uppercase tracking-widest leading-none mb-1">Promoção</p>
-                      <p className="text-xs font-black text-slate-900">Entregas Grátis {'>'} 500 MT</p>
-                    </div>
-                  </div>
+                  <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="px-10 py-5 bg-white text-slate-900 border-2 border-slate-900 font-black rounded-2xl hover:bg-slate-50 transition-all">
+                    Saber Mais
+                  </button>
                 </div>
               </div>
 
@@ -149,70 +137,6 @@ const LandingPage: React.FC = () => {
               </div>
             </div>
           </motion.div>
-        </div>
-      </section>
-
-      {/* Platform Preview Section */}
-      <section className="py-24 px-6 bg-white overflow-hidden">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-teal-50 text-teal-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 border border-teal-100">
-              <Activity size={12} /> Experiência Real
-            </div>
-            <h2 className="text-4xl font-black text-slate-900 tracking-tighter mb-4">Pré-visualização da Plataforma</h2>
-            <p className="text-slate-500 font-medium max-w-2xl mx-auto">
-              Veja como o Saúde Mais simplifica o seu dia-a-dia com uma interface intuitiva e ferramentas inteligentes.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              { 
-                title: "Dashboard de Saúde", 
-                desc: "Acompanhe os seus sinais vitais, notícias locais e acesso rápido a serviços de emergência.",
-                img: "dashboard",
-                tag: "Principal"
-              },
-              { 
-                title: "Assistente IA+", 
-                desc: "Tire dúvidas sobre sintomas e medicamentos com o nosso assistente treinado em saúde moçambicana.",
-                img: "ai",
-                tag: "Inteligente"
-              },
-              { 
-                title: "Busca de Farmácias", 
-                desc: "Encontre farmácias abertas 24h em Maputo, Beira e Nampula com stock atualizado.",
-                img: "pharmacy",
-                tag: "Local"
-              }
-            ].map((preview, i) => (
-              <motion.div 
-                key={i}
-                whileHover={{ y: -10 }}
-                className="bg-slate-50 rounded-[3rem] p-8 border border-slate-100 shadow-sm hover:shadow-2xl transition-all group"
-              >
-                <div className="aspect-video bg-white rounded-2xl mb-6 overflow-hidden relative border border-slate-100">
-                  <img 
-                    src={`https://picsum.photos/seed/${preview.img}/800/450`} 
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-                    alt={preview.title}
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 bg-teal-600 text-white text-[8px] font-black rounded-full uppercase tracking-widest">{preview.tag}</span>
-                  </div>
-                </div>
-                <h3 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">{preview.title}</h3>
-                <p className="text-slate-500 font-medium text-sm leading-relaxed mb-6">{preview.desc}</p>
-                <button 
-                  onClick={handleCTA}
-                  className="flex items-center gap-2 text-teal-600 font-black text-xs hover:gap-4 transition-all"
-                >
-                  Saiba Mais <ArrowRight size={14} />
-                </button>
-              </motion.div>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -447,8 +371,8 @@ const LandingPage: React.FC = () => {
         
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-16 text-center relative z-10">
           {[
-            { val: "0+", label: "Farmácias Parceiras" },
-            { val: "0+", label: "Utilizadores Ativos" },
+            { val: "500+", label: "Farmácias Parceiras" },
+            { val: "10k+", label: "Utilizadores Ativos" },
             { val: "24/7", label: "Apoio IA+" },
             { val: "100%", label: "Seguro & Privado" }
           ].map((stat, i) => (
@@ -481,13 +405,8 @@ const LandingPage: React.FC = () => {
       <footer className="py-12 border-t border-slate-100 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-2">
-            <div className="p-1">
-              <img 
-                src="https://img.icons8.com/fluency/48/health-book.png" 
-                alt="Logo" 
-                className="w-6 h-6"
-                referrerPolicy="no-referrer"
-              />
+            <div className="bg-teal-600 p-1.5 rounded-lg text-white">
+              <Heart size={16} fill="white" />
             </div>
             <span className="text-xl font-black text-slate-900 tracking-tighter">Saúde <span className="text-teal-600">Mais</span></span>
           </div>
