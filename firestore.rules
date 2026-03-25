@@ -48,13 +48,13 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['uid', 'name', 'email', 'role', 'pharmacyId', 'bloodType', 'weight', 'height', 'lastCheckup', 'phone', 'address', 'photoURL', 'location']) &&
+      return hasOnlyAllowedFields(['uid', 'name', 'email', 'role', 'pharmacyId', 'bloodType', 'weight', 'height', 'lastCheckup', 'phone', 'address', 'photoURL', 'location', 'loyaltyPoints', 'allergies', 'chronicConditions']) &&
              isValidEmail(data.email) &&
              (!('role' in data) || data.role in ['customer', 'pharmacy_owner', 'admin']);
     }
 
     function isValidPharmacy(data) {
-      return hasOnlyAllowedFields(['name', 'type', 'address', 'phone', 'image', 'rating', 'reviewCount', 'isOpen', 'ownerUid', 'status', 'planId', 'commissionRate', 'joinedAt', 'featured']) &&
+      return hasOnlyAllowedFields(['name', 'type', 'address', 'phone', 'image', 'rating', 'reviewCount', 'isOpen', 'ownerUid', 'status', 'planId', 'commissionRate', 'joinedAt', 'featured', 'totalSales', 'balance']) &&
              data.name is string && data.name.size() > 0 &&
              data.address is string &&
              data.ownerUid is string &&
@@ -63,19 +63,19 @@ service cloud.firestore {
     }
 
     function isValidMedication(data) {
-      return hasOnlyAllowedFields(['name', 'description', 'category', 'price', 'requiresPrescription', 'image', 'stock', 'expiryDate', 'pharmacyId', 'isSponsored', 'sponsoredUntil', 'rating', 'reviewCount', 'availableAt', 'createdAt']) &&
+      return hasOnlyAllowedFields(['name', 'description', 'category', 'price', 'requiresPrescription', 'image', 'stock', 'expiryDate', 'pharmacyId', 'isSponsored', 'sponsoredUntil', 'rating', 'reviewCount', 'availableAt', 'createdAt', 'stockAlertThreshold']) &&
              data.name is string && data.name.size() > 0 &&
              data.price is number &&
              data.pharmacyId is string;
     }
 
     function isValidOrder(data) {
-      return hasOnlyAllowedFields(['customerName', 'customerUid', 'items', 'total', 'commissionAmount', 'netAmount', 'status', 'createdAt', 'address', 'phone', 'paymentMethod', 'pharmacyIds']) &&
+      return hasOnlyAllowedFields(['customerName', 'customerUid', 'items', 'total', 'commissionAmount', 'netAmount', 'status', 'createdAt', 'address', 'phone', 'paymentMethod', 'pharmacyIds', 'prescriptionUrl', 'trackingHistory']) &&
              data.customerUid is string &&
              data.items is list &&
              data.total is number &&
              data.status in ['Pendente', 'Em Processamento', 'Em Trânsito', 'Entregue', 'Cancelado'] &&
-             data.paymentMethod in ['mpesa', 'emola', 'card'];
+             data.paymentMethod in ['mpesa', 'emola', 'card', 'paysuite'];
     }
 
     function isValidReview(data) {
@@ -95,7 +95,9 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read, write: if true;
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data)) || isAdmin();
     }
 
     match /pharmacies/{pharmacyId} {
@@ -141,6 +143,41 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    match /reminders/{reminderId} {
+      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /dependents/{dependentId} {
+      allow read: if isAuthenticated() && (resource == null || resource.data.parentUid == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.parentUid == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.parentUid == request.auth.uid;
+    }
+
+    match /chat_sessions/{sessionId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || 
+        isPharmacyOwner(resource.data.pharmacyId)
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || 
+        isPharmacyOwner(resource.data.pharmacyId)
+      );
+    }
+
+    match /chat_messages/{messageId} {
+      allow read: if isAuthenticated() && (
+        get(/databases/$(database)/documents/chat_sessions/$(resource.data.sessionId)).data.userId == request.auth.uid ||
+        isPharmacyOwner(get(/databases/$(database)/documents/chat_sessions/$(resource.data.sessionId)).data.pharmacyId)
+      );
+      allow create: if isAuthenticated() && (
+        get(/databases/$(database)/documents/chat_sessions/$(request.resource.data.sessionId)).data.userId == request.auth.uid ||
+        isPharmacyOwner(get(/databases/$(database)/documents/chat_sessions/$(request.resource.data.sessionId)).data.pharmacyId)
+      );
     }
   }
 }

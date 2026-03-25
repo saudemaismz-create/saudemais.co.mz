@@ -175,7 +175,7 @@ const Dashboard: React.FC = () => {
   }, [user]);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 pb-10">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 pb-20">
       <section className="flex items-center justify-between relative">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Saúde <span className="text-teal-600">Mais</span></h1>

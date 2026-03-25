@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { User, Shield, Bell, History, LogOut, ChevronRight, Activity, Droplets, Ruler, Weight, LogIn, Package, Clock, CheckCircle2, AlertCircle, Truck, Calendar } from 'lucide-react';
+import { User, Shield, Bell, History, LogOut, ChevronRight, Activity, Droplets, Ruler, Weight, LogIn, Package, Clock, CheckCircle2, AlertCircle, Truck, Calendar, Edit2, Save, X as CloseIcon, Heart, Award, FileText } from 'lucide-react';
 import { useFirebase } from './FirebaseProvider';
 import { auth, googleProvider, db } from '../firebase';
 import { signInWithPopup, signOut } from 'firebase/auth';
@@ -14,6 +14,26 @@ const Profile: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [showOrders, setShowOrders] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [isEditingHealth, setIsEditingHealth] = useState(false);
+  const [healthData, setHealthData] = useState({
+    bloodType: '',
+    weight: 0,
+    height: 0,
+    allergies: [] as string[],
+    chronicConditions: [] as string[]
+  });
+
+  useEffect(() => {
+    if (profile) {
+      setHealthData({
+        bloodType: profile.bloodType || '',
+        weight: profile.weight || 0,
+        height: profile.height || 0,
+        allergies: profile.allergies || [],
+        chronicConditions: profile.chronicConditions || []
+      });
+    }
+  }, [profile]);
 
   useEffect(() => {
     if (!user) {
@@ -58,6 +78,17 @@ const Profile: React.FC = () => {
       await signOut(auth);
     } catch (error) {
       console.error("Logout error:", error);
+    }
+  };
+
+  const handleSaveHealth = async () => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid), healthData);
+      setIsEditingHealth(false);
+    } catch (error) {
+      console.error('Error saving health data:', error);
+      handleFirestoreError(error, OperationType.WRITE, 'users');
     }
   };
 
@@ -130,25 +161,141 @@ const Profile: React.FC = () => {
           <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-2">
             Membro desde {user.metadata.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : 'Outubro 2023'}
           </p>
+          
+          <div className="mt-6 flex items-center justify-center gap-2 px-4 py-2 bg-teal-50 text-teal-700 rounded-full w-fit mx-auto border border-teal-100">
+            <Award size={16} />
+            <span className="text-xs font-black uppercase tracking-widest">{profile?.loyaltyPoints || 0} SaúdePoints</span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mt-8">
-          <div className="p-4 bg-slate-50 rounded-2xl">
-            <Droplets className="mx-auto text-rose-500 mb-2" size={20} />
-            <p className="text-xs text-slate-500 uppercase font-bold tracking-tighter">Tipo Sanguíneo</p>
-            <p className="text-lg font-bold text-slate-800">{profile?.bloodType || 'N/A'}</p>
-          </div>
-          <div className="p-4 bg-slate-50 rounded-2xl">
-            <Weight className="mx-auto text-blue-500 mb-2" size={20} />
-            <p className="text-xs text-slate-500 uppercase font-bold tracking-tighter">Peso</p>
-            <p className="text-lg font-bold text-slate-800">{profile?.weight || '--'} kg</p>
-          </div>
-          <div className="p-4 bg-slate-50 rounded-2xl">
-            <Ruler className="mx-auto text-teal-500 mb-2" size={20} />
-            <p className="text-xs text-slate-500 uppercase font-bold tracking-tighter">Altura</p>
-            <p className="text-lg font-bold text-slate-800">{profile?.height || '--'} cm</p>
-          </div>
+        <div className="mt-8 flex justify-between items-center px-4">
+          <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Dados Biométricos</h3>
+          <button 
+            onClick={() => setIsEditingHealth(!isEditingHealth)}
+            className="text-teal-600 hover:text-teal-700 transition-colors"
+          >
+            {isEditingHealth ? <CloseIcon size={20} /> : <Edit2 size={18} />}
+          </button>
         </div>
+
+        {isEditingHealth ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 p-4 bg-slate-50 rounded-[2rem] border border-slate-100">
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Sangue</label>
+              <select 
+                value={healthData.bloodType}
+                onChange={(e) => setHealthData({...healthData, bloodType: e.target.value})}
+                className="w-full p-3 bg-white border-none rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-teal-500"
+              >
+                <option value="">N/A</option>
+                {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Peso (kg)</label>
+              <input 
+                type="number"
+                value={healthData.weight || ''}
+                onChange={(e) => setHealthData({...healthData, weight: Number(e.target.value)})}
+                className="w-full p-3 bg-white border-none rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Altura (cm)</label>
+              <input 
+                type="number"
+                value={healthData.height || ''}
+                onChange={(e) => setHealthData({...healthData, height: Number(e.target.value)})}
+                className="w-full p-3 bg-white border-none rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+            <div className="md:col-span-3 pt-2">
+              <button 
+                onClick={handleSaveHealth}
+                className="w-full py-3 bg-teal-600 text-white font-black rounded-xl shadow-lg shadow-teal-100 flex items-center justify-center gap-2"
+              >
+                <Save size={18} /> SALVAR ALTERAÇÕES
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-4 mt-4">
+            <div className="p-4 bg-slate-50 rounded-2xl">
+              <Droplets className="mx-auto text-rose-500 mb-2" size={20} />
+              <p className="text-xs text-slate-500 uppercase font-bold tracking-tighter">Tipo Sanguíneo</p>
+              <p className="text-lg font-bold text-slate-800">{profile?.bloodType || 'N/A'}</p>
+            </div>
+            <div className="p-4 bg-slate-50 rounded-2xl">
+              <Weight className="mx-auto text-blue-500 mb-2" size={20} />
+              <p className="text-xs text-slate-500 uppercase font-bold tracking-tighter">Peso</p>
+              <p className="text-lg font-bold text-slate-800">{profile?.weight || '--'} kg</p>
+            </div>
+            <div className="p-4 bg-slate-50 rounded-2xl">
+              <Ruler className="mx-auto text-teal-500 mb-2" size={20} />
+              <p className="text-xs text-slate-500 uppercase font-bold tracking-tighter">Altura</p>
+              <p className="text-lg font-bold text-slate-800">{profile?.height || '--'} cm</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-black text-slate-900 italic flex items-center gap-3">
+            <Heart className="text-rose-500" size={24} />
+            Condições e Alergias
+          </h3>
+          <button 
+            onClick={() => setIsEditingHealth(!isEditingHealth)}
+            className="text-teal-600 hover:text-teal-700 transition-colors"
+          >
+            {isEditingHealth ? <CloseIcon size={20} /> : <Edit2 size={18} />}
+          </button>
+        </div>
+
+        {isEditingHealth ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Alergias (separadas por vírgula)</label>
+              <input 
+                type="text"
+                value={healthData.allergies.join(', ')}
+                onChange={(e) => setHealthData({...healthData, allergies: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})}
+                placeholder="Ex: Penicilina, Amendoim"
+                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Condições Crónicas (separadas por vírgula)</label>
+              <input 
+                type="text"
+                value={healthData.chronicConditions.join(', ')}
+                onChange={(e) => setHealthData({...healthData, chronicConditions: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})}
+                placeholder="Ex: Diabetes, Hipertensão"
+                className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-6 bg-rose-50 rounded-[2rem] border border-rose-100">
+              <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-3">Alergias</p>
+              <div className="flex flex-wrap gap-2">
+                {profile?.allergies && profile.allergies.length > 0 ? profile.allergies.map(a => (
+                  <span key={a} className="px-3 py-1 bg-white text-rose-600 rounded-full text-xs font-bold shadow-sm">{a}</span>
+                )) : <span className="text-rose-300 italic text-xs">Nenhuma registada</span>}
+              </div>
+            </div>
+            <div className="p-6 bg-amber-50 rounded-[2rem] border border-amber-100">
+              <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-3">Condições Crónicas</p>
+              <div className="flex flex-wrap gap-2">
+                {profile?.chronicConditions && profile.chronicConditions.length > 0 ? profile.chronicConditions.map(c => (
+                  <span key={c} className="px-3 py-1 bg-white text-amber-600 rounded-full text-xs font-bold shadow-sm">{c}</span>
+                )) : <span className="text-amber-300 italic text-xs">Nenhuma registada</span>}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden group">
@@ -221,8 +368,41 @@ const Profile: React.FC = () => {
                       </div>
                     ))}
                   </div>
+
+                  {order.prescriptionUrl && (
+                    <div className="mt-4">
+                      <a 
+                        href={order.prescriptionUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-[10px] font-black text-teal-600 uppercase tracking-widest hover:underline"
+                      >
+                        <FileText size={14} /> Ver Receita Médica Anexada
+                      </a>
+                    </div>
+                  )}
+
+                  <div className="mt-6 space-y-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Histórico de Rastreio</p>
+                    <div className="space-y-4 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+                      {(order.trackingHistory || []).map((step, sIdx) => (
+                        <div key={sIdx} className="relative pl-8">
+                          <div className={`absolute left-0 top-1 w-6 h-6 rounded-full border-4 border-white shadow-sm flex items-center justify-center ${
+                            sIdx === (order.trackingHistory?.length || 0) - 1 ? 'bg-teal-500' : 'bg-slate-200'
+                          }`}>
+                            {sIdx === (order.trackingHistory?.length || 0) - 1 && <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>}
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-slate-900">{step.status}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">{formatTimestamp(step.timestamp)}</p>
+                            {step.note && <p className="text-[10px] text-slate-500 font-medium italic mt-0.5">{step.note}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                   
-                  {order.status !== 'Entregue' && (
+                  {order.status !== 'Entregue' && order.status !== 'Cancelado' && (
                     <div className="mt-6 flex items-center gap-3">
                       <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                         <div 

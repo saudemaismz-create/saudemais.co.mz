@@ -16,7 +16,10 @@ import {
   Plus,
   Minus,
   Smartphone,
-  X
+  X,
+  FileText,
+  Upload,
+  Navigation
 } from 'lucide-react';
 import { useCart } from './CartContext';
 import { useFirebase } from './FirebaseProvider';
@@ -37,8 +40,12 @@ const Checkout: React.FC = () => {
   const [formData, setFormData] = useState({
     address: '',
     phone: '',
-    paymentMethod: 'mpesa' as 'mpesa' | 'emola'
+    paymentMethod: 'paysuite' as 'mpesa' | 'emola' | 'paysuite',
+    prescriptionUrl: ''
   });
+
+  const requiresPrescription = items.some(item => item.requiresPrescription);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'waiting' | 'success' | 'error'>('idle');
@@ -49,14 +56,49 @@ const Checkout: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    // Simulate upload delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // In a real app, upload to Firebase Storage
+    // For this demo, we'll use a mock URL
+    setFormData(prev => ({ ...prev, prescriptionUrl: 'https://example.com/prescriptions/mock-prescription.jpg' }));
+    setIsUploading(false);
+  };
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocalização não suportada pelo seu navegador.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        // In a real app, use reverse geocoding to get address
+        // For now, we'll just set a placeholder
+        setFormData(prev => ({ 
+          ...prev, 
+          address: `Localização GPS: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)} (Aprox. Av. Eduardo Mondlane)` 
+        }));
+      },
+      () => {
+        alert('Não foi possível obter a sua localização.');
+      }
+    );
+  };
+
   const handleSubmitOrder = async () => {
     if (!user || !profile) {
       setError('Você precisa estar logado para finalizar a compra.');
       return;
     }
 
-    if (!formData.address || !formData.phone) {
-      setError('Por favor, preencha todos os campos obrigatórios.');
+    if (requiresPrescription && !formData.prescriptionUrl) {
+      setError('Este pedido contém medicamentos que requerem receita médica. Por favor, faça o upload.');
       return;
     }
 
@@ -102,6 +144,10 @@ const Checkout: React.FC = () => {
         address: formData.address,
         phone: formData.phone,
         paymentMethod: formData.paymentMethod,
+        prescriptionUrl: formData.prescriptionUrl,
+        trackingHistory: [
+          { status: 'Pendente', timestamp: serverTimestamp(), note: 'Pedido recebido pelo sistema.' }
+        ],
         pharmacyIds: Array.from(new Set(items.map(i => i.pharmacyId).filter(Boolean))) as string[]
       };
 
@@ -346,7 +392,15 @@ const Checkout: React.FC = () => {
               >
                 <div className="space-y-6">
                   <div className="relative">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-2 block">Endereço de Entrega</label>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Endereço de Entrega</label>
+                      <button 
+                        onClick={handleGetLocation}
+                        className="flex items-center gap-1 text-[10px] font-black text-teal-600 uppercase tracking-widest mr-4 hover:text-teal-700"
+                      >
+                        <Navigation size={12} /> Usar GPS
+                      </button>
+                    </div>
                     <div className="relative">
                       <MapPin className="absolute left-5 top-5 text-teal-600" size={20} />
                       <textarea 
@@ -374,6 +428,48 @@ const Checkout: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+                {requiresPrescription && (
+                  <div className="p-8 bg-teal-50 rounded-[2.5rem] border border-teal-100 space-y-4">
+                    <div className="flex items-center gap-3 text-teal-900">
+                      <FileText size={24} />
+                      <h4 className="font-black tracking-tight">Receita Médica Obrigatória</h4>
+                    </div>
+                    <p className="text-xs font-bold text-teal-700 leading-relaxed">
+                      Este pedido contém medicamentos controlados. Por favor, anexe uma foto da sua receita médica válida.
+                    </p>
+                    
+                    <div className="relative">
+                      <input 
+                        type="file" 
+                        id="prescription" 
+                        className="hidden" 
+                        accept="image/*,.pdf"
+                        onChange={handleFileUpload}
+                      />
+                      <label 
+                        htmlFor="prescription"
+                        className={`w-full py-6 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${
+                          formData.prescriptionUrl ? 'border-teal-500 bg-white text-teal-600' : 'border-teal-200 bg-teal-50/50 text-teal-400 hover:bg-white'
+                        }`}
+                      >
+                        {isUploading ? (
+                          <div className="w-6 h-6 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                        ) : formData.prescriptionUrl ? (
+                          <>
+                            <CheckCircle2 size={32} />
+                            <span className="text-xs font-black uppercase tracking-widest">Receita Anexada</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={32} />
+                            <span className="text-xs font-black uppercase tracking-widest">Anexar Receita</span>
+                          </>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -385,7 +481,19 @@ const Checkout: React.FC = () => {
                 exit={{ opacity: 0, y: -20 }}
                 className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-50 space-y-8"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <button 
+                    onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'paysuite' }))}
+                    className={`p-8 rounded-[2.5rem] border-4 transition-all flex flex-col items-center gap-4 ${
+                      formData.paymentMethod === 'paysuite' 
+                        ? 'border-teal-600 bg-teal-50/30' 
+                        : 'border-slate-100 hover:border-slate-200'
+                    }`}
+                  >
+                    <div className="w-16 h-16 bg-teal-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl">P</div>
+                    <span className="font-black text-slate-900">PaySuite</span>
+                  </button>
+
                   <button 
                     onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'mpesa' }))}
                     className={`p-8 rounded-[2.5rem] border-4 transition-all flex flex-col items-center gap-4 ${

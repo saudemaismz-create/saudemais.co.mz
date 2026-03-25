@@ -16,6 +16,8 @@
         "status": { "type": "string", "enum": ["pending", "active", "suspended"], "description": "Approval status." },
         "planId": { "type": "string", "enum": ["basic", "pro", "premium"], "description": "Subscription plan." },
         "commissionRate": { "type": "number", "description": "Commission percentage (e.g. 0.10)." },
+        "totalSales": { "type": "number", "description": "Total sales amount." },
+        "balance": { "type": "number", "description": "Current balance for withdrawal." },
         "joinedAt": { "type": "string", "format": "date-time" },
         "featured": { "type": "boolean", "description": "Whether the pharmacy is featured on homepage." }
       },
@@ -38,7 +40,8 @@
         "isSponsored": { "type": "boolean", "description": "Whether the product is sponsored." },
         "sponsoredUntil": { "type": "string", "format": "date-time" },
         "rating": { "type": "number" },
-        "reviewCount": { "type": "number" }
+        "reviewCount": { "type": "number" },
+        "stockAlertThreshold": { "type": "number", "description": "Threshold for low stock alerts." }
       },
       "required": ["name", "price", "pharmacyId"]
     },
@@ -57,8 +60,10 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "Order creation timestamp." },
         "address": { "type": "string", "description": "Delivery address." },
         "phone": { "type": "string", "description": "Contact phone." },
-        "paymentMethod": { "type": "string", "enum": ["mpesa", "emola", "card"], "description": "Payment method used." },
-        "pharmacyIds": { "type": "array", "items": { "type": "string" }, "description": "IDs of pharmacies involved." }
+        "paymentMethod": { "type": "string", "enum": ["mpesa", "emola", "card", "paysuite"], "description": "Payment method used." },
+        "pharmacyIds": { "type": "array", "items": { "type": "string" }, "description": "IDs of pharmacies involved." },
+        "prescriptionUrl": { "type": "string", "description": "URL of the uploaded prescription." },
+        "trackingHistory": { "type": "array", "items": { "type": "object" }, "description": "History of status changes." }
       },
       "required": ["customerUid", "items", "total", "status", "address", "phone", "paymentMethod"]
     },
@@ -72,7 +77,10 @@
         "role": { "type": "string", "enum": ["customer", "pharmacy_owner", "admin"] },
         "pharmacyId": { "type": "string", "description": "ID of the pharmacy if the user is an owner." },
         "phone": { "type": "string" },
-        "address": { "type": "string" }
+        "address": { "type": "string" },
+        "loyaltyPoints": { "type": "number" },
+        "allergies": { "type": "array", "items": { "type": "string" } },
+        "chronicConditions": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["email", "role"]
     },
@@ -135,6 +143,62 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["commissionRate", "featuredPharmacyFee", "sponsoredProductFee"]
+    },
+    "Reminder": {
+      "title": "Reminder",
+      "description": "Medication reminder for a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "medicationName": { "type": "string" },
+        "dosage": { "type": "string" },
+        "frequency": { "type": "string", "enum": ["daily", "weekly", "custom"] },
+        "times": { "type": "array", "items": { "type": "string" } },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "medicationName", "times", "active"]
+    },
+    "Dependent": {
+      "title": "Dependent",
+      "description": "Family member or dependent of a user.",
+      "type": "object",
+      "properties": {
+        "parentUid": { "type": "string" },
+        "name": { "type": "string" },
+        "relationship": { "type": "string" },
+        "age": { "type": "number" },
+        "bloodType": { "type": "string" },
+        "allergies": { "type": "array", "items": { "type": "string" } },
+        "chronicConditions": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["parentUid", "name", "relationship"]
+    },
+    "ChatSession": {
+      "title": "ChatSession",
+      "description": "A chat session between a user and a pharmacy.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "pharmacyId": { "type": "string" },
+        "pharmacyName": { "type": "string" },
+        "lastMessage": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "pharmacyId", "updatedAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A message within a chat session.",
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sessionId", "senderId", "text", "createdAt"]
     }
   },
   "firestore": {
@@ -169,6 +233,22 @@
     "/settings/{settingId}": {
       "schema": "Settings",
       "description": "Global settings."
+    },
+    "/reminders/{reminderId}": {
+      "schema": "Reminder",
+      "description": "Medication reminders."
+    },
+    "/dependents/{dependentId}": {
+      "schema": "Dependent",
+      "description": "Family dependents."
+    },
+    "/chat_sessions/{sessionId}": {
+      "schema": "ChatSession",
+      "description": "Chat sessions between users and pharmacies."
+    },
+    "/chat_messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Messages in chat sessions."
     }
   }
 }

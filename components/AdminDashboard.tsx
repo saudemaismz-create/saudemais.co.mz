@@ -21,6 +21,9 @@ import {
   Tooltip, ResponsiveContainer, Cell, PieChart, Pie
 } from 'recharts';
 
+import { fetchJSON } from '../utils/api';
+import { MOCK_ADMIN_PHARMACIES, MOCK_STORE_ORDERS, MOCK_USER } from '../constants';
+
 const AdminDashboard: React.FC = () => {
   const { user, profile, isAuthReady } = useFirebase();
   const { showBoundary } = useErrorBoundary();
@@ -36,6 +39,7 @@ const AdminDashboard: React.FC = () => {
     maintenanceMode: false
   });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [gatewayStatus, setGatewayStatus] = useState<any>(null);
 
   useEffect(() => {
     if (!isAuthReady) return;
@@ -335,6 +339,31 @@ const AdminDashboard: React.FC = () => {
             </div>
             <p className="text-xs text-slate-400 font-medium italic">Custo diário para farmácias aparecerem na seção de destaque da página inicial.</p>
           </div>
+
+          <div className="space-y-4 md:col-span-2 pt-6 border-t border-slate-100">
+            <label className="block text-sm font-black text-slate-400 uppercase tracking-widest">Gateway de Pagamento (Paytek)</label>
+            <div className={`p-6 rounded-3xl border flex items-center justify-between ${gatewayStatus?.configured ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${gatewayStatus?.configured ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'}`}>
+                  <CreditCard size={24} />
+                </div>
+                <div>
+                  <p className={`text-sm font-black ${gatewayStatus?.configured ? 'text-emerald-900' : 'text-amber-900'}`}>
+                    Status: {gatewayStatus?.configured ? 'Configurado' : 'Aguardando Configuração'}
+                  </p>
+                  <p className="text-xs font-medium text-slate-500">
+                    Modo Atual: <span className="font-black uppercase">{gatewayStatus?.mode || 'Carregando...'}</span>
+                  </p>
+                </div>
+              </div>
+              {!gatewayStatus?.configured && (
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">Ação Necessária</p>
+                  <p className="text-[10px] text-amber-600 font-medium max-w-[200px]">Adicione PAYMENT_GATEWAY_TOKEN nas variáveis de ambiente.</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -542,8 +571,13 @@ const AdminDashboard: React.FC = () => {
       <div className="bg-white border-b border-slate-100 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="bg-slate-900 p-2.5 rounded-xl text-white">
-              <Shield size={24} />
+            <div className="p-1">
+              <img 
+                src="https://img.icons8.com/fluency/48/health-book.png" 
+                alt="Logo" 
+                className="w-10 h-10"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <div>
               <h1 className="text-xl font-black text-slate-900 tracking-tight">Admin <span className="text-teal-600">Saúde Mais</span></h1>

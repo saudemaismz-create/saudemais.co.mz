@@ -14,6 +14,9 @@ export interface UserProfile {
   weight?: number;
   height?: number;
   lastCheckup?: string;
+  loyaltyPoints?: number;
+  allergies?: string[];
+  chronicConditions?: string[];
   // Pharmacy specific
   pharmacyId?: string;
   location?: {
@@ -41,6 +44,8 @@ export interface Pharmacy {
   type?: 'pharmacy' | 'clinic';
   planId?: 'basic' | 'pro' | 'premium';
   commissionRate?: number; // e.g., 0.10 for 10%
+  totalSales?: number;
+  balance?: number;
   joinedAt?: any;
   featured?: boolean;
 }
@@ -70,6 +75,7 @@ export interface Medication {
   sponsoredUntil?: any;
   rating?: number;
   reviewCount?: number;
+  stockAlertThreshold?: number;
 }
 
 export interface HealthMetric {
@@ -94,8 +100,10 @@ export interface Order {
   createdAt: any; // Firestore Timestamp
   address: string;
   phone: string;
-  paymentMethod: 'mpesa' | 'emola' | 'card';
+  paymentMethod: 'mpesa' | 'emola' | 'card' | 'paysuite';
   pharmacyIds?: string[];
+  prescriptionUrl?: string;
+  trackingHistory?: { status: string; timestamp: any; note?: string }[];
 }
 
 export interface Review {
@@ -137,6 +145,46 @@ export interface Coupon {
 export interface ChatMessage {
   role: 'user' | 'model';
   parts: { text: string }[];
+}
+
+export interface Reminder {
+  id?: string;
+  userId: string;
+  medicationName: string;
+  dosage: string;
+  frequency: 'daily' | 'weekly' | 'custom';
+  times: string[]; // e.g., ["08:00", "20:00"]
+  active: boolean;
+  createdAt: any;
+}
+
+export interface Dependent {
+  id?: string;
+  parentUid: string;
+  name: string;
+  relationship: string;
+  age: number;
+  bloodType?: string;
+  allergies?: string[];
+  chronicConditions?: string[];
+}
+
+export interface ChatSession {
+  id?: string;
+  userId: string;
+  userName: string;
+  pharmacyId: string;
+  pharmacyName: string;
+  lastMessage: string;
+  updatedAt: any;
+}
+
+export interface DirectMessage {
+  id?: string;
+  sessionId: string;
+  senderId: string;
+  text: string;
+  createdAt: any;
 }
 
 export enum AppRoute {

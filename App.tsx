@@ -18,6 +18,10 @@ const StoreDashboard = lazy(() => import('./components/StoreDashboard'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const Checkout = lazy(() => import('./components/Checkout'));
 const ProductDetail = lazy(() => import('./components/ProductDetail'));
+const PrescriptionPrice = lazy(() => import('./components/PrescriptionPrice'));
+const PillTracker = lazy(() => import('./components/PillTracker'));
+const FamilyProfiles = lazy(() => import('./components/FamilyProfiles'));
+const PharmacyChat = lazy(() => import('./components/PharmacyChat'));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -55,8 +59,11 @@ const App: React.FC = () => {
                     
                     {/* App Routes */}
                     <Route path="/app" element={<AuthGuard><Dashboard /></AuthGuard>} />
-                    <Route path="/app/search" element={<AuthGuard><Search /></AuthGuard>} />
+                    <Route path="/app/prescription" element={<AuthGuard><PrescriptionPrice /></AuthGuard>} />
                     <Route path="/app/assistant" element={<AuthGuard><Assistant /></AuthGuard>} />
+                    <Route path="/app/reminders" element={<AuthGuard><PillTracker /></AuthGuard>} />
+                    <Route path="/app/chat" element={<AuthGuard><PharmacyChat /></AuthGuard>} />
+                    <Route path="/app/family" element={<AuthGuard><FamilyProfiles /></AuthGuard>} />
                     <Route path="/app/profile" element={<AuthGuard><Profile /></AuthGuard>} />
                     <Route path="/app/pharmacy-panel" element={<AuthGuard><StoreDashboard /></AuthGuard>} />
                     <Route path="/app/admin" element={<AuthGuard><AdminDashboard /></AuthGuard>} />

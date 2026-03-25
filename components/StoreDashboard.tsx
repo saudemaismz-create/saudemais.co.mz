@@ -77,7 +77,7 @@ const StoreDashboard: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newMed, setNewMed] = useState<Partial<Medication>>({
     name: '', price: 0, category: 'Geral', description: '', requiresPrescription: false,
-    stock: 0, expiryDate: '',
+    stock: 0, expiryDate: '', stockAlertThreshold: 10,
     image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400'
   });
   const [inventorySearch, setInventorySearch] = useState('');
@@ -269,13 +269,14 @@ const StoreDashboard: React.FC = () => {
         description: newMed.description || '',
         requiresPrescription: !!newMed.requiresPrescription,
         stock: Number(newMed.stock) || 0,
+        stockAlertThreshold: Number(newMed.stockAlertThreshold) || 10,
         expiryDate: newMed.expiryDate || '',
         image: newMed.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400',
         pharmacyId: myPharmacy.id
       };
       await addDoc(collection(db, 'medications'), medData);
       setIsAdding(false);
-      setNewMed({ name: '', price: 0, category: 'Geral', description: '', requiresPrescription: false, stock: 0, expiryDate: '' });
+      setNewMed({ name: '', price: 0, category: 'Geral', description: '', requiresPrescription: false, stock: 0, expiryDate: '', stockAlertThreshold: 10 });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'medications');
     } finally {
@@ -896,8 +897,20 @@ const StoreDashboard: React.FC = () => {
                           value={order.status}
                           onChange={async (e) => {
                             if (order.id) {
+                              const newStatus = e.target.value;
                               try {
-                                await updateDoc(doc(db, 'orders', order.id), { status: e.target.value });
+                                const newHistory = [
+                                  ...(order.trackingHistory || []),
+                                  {
+                                    status: newStatus,
+                                    timestamp: new Date(),
+                                    note: `Status atualizado para ${newStatus} pela farmácia.`
+                                  }
+                                ];
+                                await updateDoc(doc(db, 'orders', order.id), { 
+                                  status: newStatus,
+                                  trackingHistory: newHistory
+                                });
                               } catch (error) {
                                 handleFirestoreError(error, OperationType.UPDATE, `orders/${order.id}`);
                               }
@@ -933,27 +946,27 @@ const StoreDashboard: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Ganhos Brutos</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Vendas Totais (Histórico)</p>
                 <p className="text-4xl font-black text-slate-900 font-mono tracking-tighter">
-                  {orders.reduce((acc, o) => acc + (o.total || 0), 0).toLocaleString()} MT
+                  {(myPharmacy?.totalSales || 0).toLocaleString()} MT
                 </p>
-                <div className="mt-4 flex items-center gap-2 text-green-500 text-xs font-bold">
-                  <ArrowUpRight size={14} /> +15% vs mês anterior
+                <div className="mt-4 flex items-center gap-2 text-slate-400 text-xs font-medium">
+                  Total acumulado desde a abertura
                 </div>
               </div>
               <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Comissões (10%)</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Comissões Pendentes</p>
                 <p className="text-4xl font-black text-rose-500 font-mono tracking-tighter">
-                  {(orders.reduce((acc, o) => acc + (o.total || 0), 0) * 0.1).toLocaleString()} MT
+                  {(orders.filter(o => o.status !== 'Entregue').reduce((acc, o) => acc + (o.total || 0), 0) * 0.1).toLocaleString()} MT
                 </p>
-                <p className="mt-4 text-slate-400 text-xs font-medium italic">Retido automaticamente pela plataforma</p>
+                <p className="mt-4 text-slate-400 text-xs font-medium italic">Estimativa baseada em pedidos pendentes</p>
               </div>
               <div className="bg-teal-600 p-8 rounded-[2.5rem] shadow-xl shadow-teal-100 text-white">
-                <p className="text-[10px] font-black text-teal-100 uppercase tracking-widest mb-2">Saldo Disponível</p>
+                <p className="text-[10px] font-black text-teal-100 uppercase tracking-widest mb-2">Saldo na Carteira</p>
                 <p className="text-4xl font-black font-mono tracking-tighter">
-                  {(orders.reduce((acc, o) => acc + (o.total || 0), 0) * 0.9).toLocaleString()} MT
+                  {(myPharmacy?.balance || 0).toLocaleString()} MT
                 </p>
-                <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="mt-6 w-full py-3 bg-white text-teal-600 font-black rounded-xl hover:bg-teal-50 transition-colors text-sm">
+                <button onClick={() => alert('Funcionalidade de saque em processamento.')} className="mt-6 w-full py-3 bg-white text-teal-600 font-black rounded-xl hover:bg-teal-50 transition-colors text-sm">
                   SOLICITAR LEVANTAMENTO
                 </button>
               </div>
@@ -1235,33 +1248,46 @@ const StoreDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 uppercase ml-2">Stock Inicial</label>
-                  <div className="relative">
-                    <Package className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input 
-                      type="number" 
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-teal-500/10 font-bold"
-                      placeholder="Ex: 100"
-                      value={newMed.stock || ''}
-                      onChange={e => setNewMed({...newMed, stock: Number(e.target.value)})}
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-400 uppercase ml-2">Stock Inicial</label>
+                    <div className="relative">
+                      <Package className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input 
+                        type="number" 
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-teal-500/10 font-bold"
+                        placeholder="Ex: 100"
+                        value={newMed.stock || ''}
+                        onChange={e => setNewMed({...newMed, stock: Number(e.target.value)})}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-400 uppercase ml-2">Alerta de Stock Baixo</label>
+                    <div className="relative">
+                      <AlertCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input 
+                        type="number" 
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-teal-500/10 font-bold"
+                        placeholder="Ex: 10"
+                        value={newMed.stockAlertThreshold || ''}
+                        onChange={e => setNewMed({...newMed, stockAlertThreshold: Number(e.target.value)})}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-400 uppercase ml-2">Data de Validade</label>
+                    <div className="relative">
+                      <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input 
+                        type="date" 
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-teal-500/10 font-bold"
+                        value={newMed.expiryDate || ''}
+                        onChange={e => setNewMed({...newMed, expiryDate: e.target.value})}
+                      />
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 uppercase ml-2">Data de Validade</label>
-                  <div className="relative">
-                    <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input 
-                      type="date" 
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-teal-500/10 font-bold"
-                      value={newMed.expiryDate || ''}
-                      onChange={e => setNewMed({...newMed, expiryDate: e.target.value})}
-                    />
-                  </div>
-                </div>
-              </div>
               <div className="space-y-2">
                 <label className="text-xs font-black text-slate-400 uppercase ml-2">Categoria</label>
                 <div className="relative">

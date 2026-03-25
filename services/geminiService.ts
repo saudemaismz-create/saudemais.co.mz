@@ -90,3 +90,34 @@ export const getHealthNews = async () => {
     return { text: "Não foi possível carregar as notícias agora.", links: [] };
   }
 };
+
+export const analyzePrescription = async (base64Image: string): Promise<string[]> => {
+  try {
+    const ai = getAI();
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [
+        {
+          inlineData: {
+            data: base64Image,
+            mimeType: "image/jpeg"
+          }
+        },
+        {
+          text: "Extraia apenas os nomes dos medicamentos desta receita médica. Retorne apenas uma lista separada por vírgulas, sem explicações extras. Se não encontrar medicamentos, retorne 'Nenhum'."
+        }
+      ],
+      config: {
+        systemInstruction: "Você é um assistente farmacêutico especializado em ler receitas médicas manuscritas ou digitais.",
+      }
+    });
+
+    const text = response.text || "";
+    if (text.toLowerCase().includes("nenhum")) return [];
+    
+    return text.split(',').map(m => m.trim()).filter(Boolean);
+  } catch (error) {
+    console.error("Prescription Analysis Error:", error);
+    throw error;
+  }
+};

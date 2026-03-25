@@ -14,44 +14,52 @@ async function startServer() {
   app.post('/api/payment/initiate', async (req, res) => {
     const { amount, phone, provider, orderId } = req.body;
 
-    console.log(`Initiating ${provider} payment for order ${orderId}: ${amount} MT to ${phone}`);
+    console.log(`Initiating ${provider} payment via PaySuite for order ${orderId}: ${amount} MT to ${phone}`);
 
-    // REAL INTEGRATION POINT:
-    // This is where you would call the Paytek, RevPay, or M-Pesa API.
-    // Example (Mocking for now, but structured for real API):
-    
     try {
-      /* 
-      // REAL CODE EXAMPLE (e.g., Paytek):
-      const response = await axios.post('https://api.paytek.co.mz/v1/c2b/payment', {
+      // PaySuite API Integration
+      // Using Paytek/PaySuite common API structure for MZ
+      const apiToken = process.env.PAYSUITE_API_KEY;
+      const apiUrl = process.env.PAYSUITE_API_URL || 'https://api.paytek.co.mz/v1/c2b/payment';
+
+      if (!apiToken) {
+        console.warn('PAYSUITE_API_KEY not set. Falling back to mock.');
+        // Mocking for now if no key is provided
+        setTimeout(() => {
+          console.log(`USSD Push sent to ${phone}`);
+        }, 1000);
+
+        return res.json({
+          success: true,
+          transactionId: `MOCK_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+          message: 'USSD Push enviado com sucesso via PaySuite (Simulado). Por favor, confirme no seu telemóvel.'
+        });
+      }
+
+      const response = await axios.post(apiUrl, {
         amount: amount,
         msisdn: phone,
         reference: orderId,
-        description: 'Pagamento Saude Mais'
+        description: `Pagamento Saude Mais - Pedido ${orderId}`,
+        provider: provider === 'paysuite' ? 'mpesa' : provider // Default to mpesa if generic paysuite selected
       }, {
         headers: {
-          'Authorization': `Bearer ${process.env.PAYMENT_GATEWAY_TOKEN}`,
+          'Authorization': `Bearer ${apiToken}`,
           'Content-Type': 'application/json'
         }
       });
-      return res.json(response.data);
-      */
 
-      // Mocking a successful USSD push trigger
-      setTimeout(() => {
-        console.log(`USSD Push sent to ${phone}`);
-      }, 1000);
-
+      console.log('PaySuite Response:', response.data);
       res.json({
         success: true,
-        transactionId: `TXN_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+        transactionId: response.data.transactionId || response.data.id,
         message: 'USSD Push enviado com sucesso. Por favor, confirme no seu telemóvel.'
       });
     } catch (error: any) {
-      console.error('Payment Error:', error.response?.data || error.message);
+      console.error('PaySuite Error:', error.response?.data || error.message);
       res.status(500).json({
         success: false,
-        error: 'Falha ao iniciar o pagamento. Verifique o número e tente novamente.'
+        error: error.response?.data?.message || 'Falha ao iniciar o pagamento via PaySuite. Verifique o número e tente novamente.'
       });
     }
   });

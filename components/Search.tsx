@@ -7,6 +7,7 @@ import { db } from '../firebase';
 import { Medication, Pharmacy } from '../types';
 import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHandler';
 import { useCart } from './CartContext';
+import { MOCK_PHARMACIES, MOCK_MEDICATIONS } from '../constants';
 
 const Search: React.FC = () => {
   const navigate = useNavigate();

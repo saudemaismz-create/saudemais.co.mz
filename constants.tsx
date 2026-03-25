@@ -86,11 +86,32 @@ export const MOCK_MEDICATIONS: Medication[] = [
 ];
 
 export const MOCK_USER: UserProfile = {
-  name: 'Mário da Silva',
-  email: 'mario@example.com',
+  name: 'Abacar Himia',
+  email: 'abacar@saudemais.mz',
   role: 'customer',
-  bloodType: 'A+',
-  weight: 72,
-  height: 180,
-  lastCheckup: '20 Jan 2024'
+  bloodType: 'O+',
+  weight: 75,
+  height: 178,
+  lastCheckup: '15 Mar 2026'
 };
+
+export const MOCK_STORE_ORDERS = [
+  { id: 'ORD-001', customerName: 'João Silva', total: 1250, status: 'completed', createdAt: new Date('2026-03-20T10:00:00') },
+  { id: 'ORD-002', customerName: 'Maria Santos', total: 850, status: 'pending', createdAt: new Date('2026-03-21T14:30:00') },
+  { id: 'ORD-003', customerName: 'Pedro Muzila', total: 2100, status: 'processing', createdAt: new Date('2026-03-22T09:15:00') },
+  { id: 'ORD-004', customerName: 'Ana Bela', total: 450, status: 'completed', createdAt: new Date('2026-03-19T16:45:00') },
+  { id: 'ORD-005', customerName: 'Carlos Tembe', total: 3200, status: 'cancelled', createdAt: new Date('2026-03-18T11:20:00') },
+];
+
+export const MOCK_ADMIN_STATS = [
+  { label: 'Receita Total', value: '1.2M MT', trend: '+15%', up: true },
+  { label: 'Comissões', value: '120k MT', trend: '+12%', up: true },
+  { label: 'Farmácias', value: '24', trend: '+5', up: true },
+  { label: 'Utilizadores', value: '1,450', trend: '+120', up: true },
+];
+
+export const MOCK_ADMIN_PHARMACIES = MOCK_PHARMACIES.map(p => ({
+  ...p,
+  planId: p.id === '1' ? 'premium' : p.id === '2' ? 'pro' : 'basic',
+  sales: Math.floor(Math.random() * 50000) + 10000
+}));
