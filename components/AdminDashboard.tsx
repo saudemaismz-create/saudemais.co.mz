@@ -108,6 +108,17 @@ const AdminDashboard: React.FC = () => {
       }
     });
 
+    // Fetch Gateway Status
+    const fetchStatus = async () => {
+      try {
+        const status = await fetchJSON('/api/payment/status');
+        setGatewayStatus(status);
+      } catch (err) {
+        console.error('Error fetching gateway status:', err);
+      }
+    };
+    fetchStatus();
+
     setLoading(false);
     return () => {
       unsubPharmacies();
@@ -341,7 +352,7 @@ const AdminDashboard: React.FC = () => {
           </div>
 
           <div className="space-y-4 md:col-span-2 pt-6 border-t border-slate-100">
-            <label className="block text-sm font-black text-slate-400 uppercase tracking-widest">Gateway de Pagamento (Paytek)</label>
+            <label className="block text-sm font-black text-slate-400 uppercase tracking-widest">Gateway de Pagamento (PaySuite)</label>
             <div className={`p-6 rounded-3xl border flex items-center justify-between ${gatewayStatus?.configured ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
               <div className="flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${gatewayStatus?.configured ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'}`}>
@@ -359,7 +370,7 @@ const AdminDashboard: React.FC = () => {
               {!gatewayStatus?.configured && (
                 <div className="text-right">
                   <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">Ação Necessária</p>
-                  <p className="text-[10px] text-amber-600 font-medium max-w-[200px]">Adicione PAYMENT_GATEWAY_TOKEN nas variáveis de ambiente.</p>
+                  <p className="text-[10px] text-amber-600 font-medium max-w-[200px]">Adicione PAYSUITE_API_KEY nas variáveis de ambiente.</p>
                 </div>
               )}
             </div>

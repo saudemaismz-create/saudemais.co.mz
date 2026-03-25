@@ -64,6 +64,15 @@ async function startServer() {
     }
   });
 
+  // Payment Status Route
+  app.get('/api/payment/status', (req, res) => {
+    res.json({
+      configured: !!process.env.PAYSUITE_API_KEY,
+      mode: process.env.PAYSUITE_API_KEY ? 'Produção (PaySuite)' : 'Simulado (Mock)',
+      provider: 'PaySuite'
+    });
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

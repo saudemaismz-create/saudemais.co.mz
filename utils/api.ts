@@ -1,5 +1,5 @@
 
-export const fetchJSON = async (url: string, options: RequestInit) => {
+export const fetchJSON = async (url: string, options: RequestInit = {}) => {
   const response = await fetch(url, options);
   const contentType = response.headers.get('content-type');
   
