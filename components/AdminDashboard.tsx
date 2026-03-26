@@ -5,7 +5,7 @@ import {
   Search, Filter, CheckCircle2, XCircle, 
   AlertCircle, TrendingUp, ArrowUpRight, 
   ArrowDownRight, LayoutDashboard, Settings as SettingsIcon,
-  CreditCard, Megaphone, FileText
+  CreditCard, Megaphone, FileText, Pill, Trash2, Edit3 as EditIcon
 } from 'lucide-react';
 import { 
   collection, query, onSnapshot, updateDoc, 
@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useFirebase } from './FirebaseProvider';
-import { Pharmacy, Order, UserProfile, PharmacyPlan } from '../types';
+import { Pharmacy, Order, UserProfile, PharmacyPlan, Medication } from '../types';
 import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHandler';
 import { useErrorBoundary } from 'react-error-boundary';
 import { 
@@ -28,15 +28,17 @@ const AdminDashboard: React.FC = () => {
   const { user, profile, isAuthReady } = useFirebase();
   const { showBoundary } = useErrorBoundary();
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
+  const [medications, setMedications] = useState<Medication[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [ads, setAds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'pharmacies' | 'finances' | 'ads' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'pharmacies' | 'medications' | 'finances' | 'ads' | 'settings'>('overview');
   const [settings, setSettings] = useState({
     commissionRate: 10,
     featuredFee: 500,
-    maintenanceMode: false
+    maintenanceMode: false,
+    paysuiteApiKey: ''
   });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [gatewayStatus, setGatewayStatus] = useState<any>(null);
@@ -96,6 +98,16 @@ const AdminDashboard: React.FC = () => {
       }
     });
 
+    const unsubMedications = onSnapshot(collection(db, 'medications'), (snap) => {
+      setMedications(snap.docs.map(d => ({ id: d.id, ...d.data() } as Medication)));
+    }, (error) => {
+      try {
+        handleFirestoreError(error, OperationType.LIST, 'medications');
+      } catch (err) {
+        showBoundary(err);
+      }
+    });
+
     const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
       if (snapshot.exists()) {
         setSettings(snapshot.data() as any);
@@ -122,6 +134,7 @@ const AdminDashboard: React.FC = () => {
     setLoading(false);
     return () => {
       unsubPharmacies();
+      unsubMedications();
       unsubOrders();
       unsubUsers();
       unsubAds();
@@ -352,7 +365,28 @@ const AdminDashboard: React.FC = () => {
           </div>
 
           <div className="space-y-4 md:col-span-2 pt-6 border-t border-slate-100">
-            <label className="block text-sm font-black text-slate-400 uppercase tracking-widest">Gateway de Pagamento (PaySuite)</label>
+            <label className="block text-sm font-black text-slate-400 uppercase tracking-widest">PaySuite API Key</label>
+            <div className="flex items-center gap-4">
+              <input 
+                type="password" 
+                value={settings.paysuiteApiKey}
+                onChange={(e) => setSettings({ ...settings, paysuiteApiKey: e.target.value })}
+                placeholder="Insira a sua API Key da PaySuite"
+                className="flex-1 bg-slate-50 border-none rounded-2xl p-4 font-mono text-sm focus:ring-4 focus:ring-teal-500/10"
+              />
+              <button 
+                onClick={() => handleUpdateSetting('paysuiteApiKey', settings.paysuiteApiKey)}
+                disabled={isSavingSettings}
+                className="bg-teal-600 text-white px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-teal-700 transition-all shadow-lg disabled:opacity-50"
+              >
+                {isSavingSettings ? '...' : 'Salvar Chave'}
+              </button>
+            </div>
+            <p className="text-xs text-slate-400 font-medium italic">Esta chave é usada para processar pagamentos via PaySuite. Mantenha-a segura.</p>
+          </div>
+
+          <div className="space-y-4 md:col-span-2 pt-6 border-t border-slate-100">
+            <label className="block text-sm font-black text-slate-400 uppercase tracking-widest">Gateway de Pagamento (PaySuite) Status</label>
             <div className={`p-6 rounded-3xl border flex items-center justify-between ${gatewayStatus?.configured ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
               <div className="flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${gatewayStatus?.configured ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'}`}>
@@ -404,6 +438,82 @@ const AdminDashboard: React.FC = () => {
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+
+  const renderMedications = () => (
+    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+       <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Gestão Global de Medicamentos</h2>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input 
+              type="text" 
+              placeholder="Pesquisar medicamento..." 
+              className="pl-12 pr-6 py-3 bg-white border border-slate-100 rounded-2xl text-sm font-bold w-64 focus:ring-4 focus:ring-teal-500/10 shadow-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-slate-50/50 border-b border-slate-100">
+            <tr>
+              <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Medicamento</th>
+              <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Farmácia</th>
+              <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Preço</th>
+              <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Stock</th>
+              <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {medications.map((med) => {
+              const pharm = pharmacies.find(p => p.id === med.pharmacyId);
+              return (
+                <tr key={med.id} className="hover:bg-slate-50/30 transition-colors group">
+                  <td className="px-8 py-6">
+                    <div className="flex items-center gap-4">
+                      <img src={med.image} className="w-10 h-10 rounded-xl object-cover" alt={med.name} />
+                      <div>
+                        <p className="text-sm font-black text-slate-900">{med.name}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{med.category}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6">
+                    <span className="text-xs font-bold text-slate-600">{pharm?.name || 'Desconhecida'}</span>
+                  </td>
+                  <td className="px-8 py-6 font-black text-slate-900 font-mono text-sm">
+                    {med.price.toLocaleString()} MT
+                  </td>
+                  <td className="px-8 py-6">
+                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                      (med.stock || 0) < 10 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
+                    }`}>
+                      {med.stock || 0} un
+                    </span>
+                  </td>
+                  <td className="px-8 py-6 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="p-2 text-slate-400 hover:text-teal-600 transition-colors">
+                        <EditIcon size={18} />
+                      </button>
+                      <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="p-2 text-slate-400 hover:text-rose-600 transition-colors">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {medications.length === 0 && (
+          <p className="text-center text-slate-400 font-medium py-10 italic">Nenhum medicamento registado.</p>
+        )}
       </div>
     </div>
   );
@@ -607,6 +717,7 @@ const AdminDashboard: React.FC = () => {
           {[
             { id: 'overview', label: 'Visão Geral', icon: LayoutDashboard },
             { id: 'pharmacies', label: 'Farmácias', icon: Shield },
+            { id: 'medications', label: 'Medicamentos', icon: Pill },
             { id: 'finances', label: 'Finanças', icon: CreditCard },
             { id: 'ads', label: 'Publicidade', icon: Megaphone },
             { id: 'settings', label: 'Configurações', icon: SettingsIcon },
@@ -630,6 +741,7 @@ const AdminDashboard: React.FC = () => {
       <main className="max-w-7xl mx-auto px-6 py-8">
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'pharmacies' && renderPharmacies()}
+        {activeTab === 'medications' && renderMedications()}
         {activeTab === 'finances' && renderFinances()}
         {activeTab === 'ads' && renderAds()}
         {activeTab === 'settings' && renderSettings()}

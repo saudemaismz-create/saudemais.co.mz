@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, Search, MapPin, Pill, Activity, ShieldCheck, Calendar, Bell, Newspaper, ExternalLink, ShoppingBag, ShoppingCart, Plus, MessageSquare, Sparkles as SparklesIcon, X, Droplets, Heart, Moon, Footprints } from 'lucide-react';
+import { TrendingUp, Search, MapPin, Pill, Activity, ShieldCheck, Calendar, Bell, Newspaper, ExternalLink, ShoppingBag, ShoppingCart, Plus, MessageSquare, Sparkles as SparklesIcon, X, Droplets, Heart, Moon, Footprints, Store, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getHealthNews } from '../services/geminiService';
@@ -26,6 +26,7 @@ const Dashboard: React.FC = () => {
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
+  const [myPharmacy, setMyPharmacy] = useState<Pharmacy | null>(null);
 
   // Health Metrics State
   const [showHealthCalc, setShowHealthCalc] = useState(false);
@@ -137,6 +138,17 @@ const Dashboard: React.FC = () => {
       });
     }
 
+    // Fetch user's pharmacy if they are an owner
+    let unsubscribeMyPharmacy = () => {};
+    if (user && profile?.role === 'pharmacy_owner') {
+      const qMyPharmacy = query(collection(db, 'pharmacies'), where('ownerUid', '==', user.uid), limit(1));
+      unsubscribeMyPharmacy = onSnapshot(qMyPharmacy, (snapshot) => {
+        if (!snapshot.empty) {
+          setMyPharmacy({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Pharmacy);
+        }
+      });
+    }
+
     // Fetch Pharmacies - Simplified to rule out index issues
     const qPharmacies = query(collection(db, 'pharmacies'), limit(10));
     const unsubscribePharmacies = onSnapshot(qPharmacies, (snapshot) => {
@@ -171,8 +183,9 @@ const Dashboard: React.FC = () => {
       unsubscribePharmacies();
       unsubscribeMedications();
       unsubscribeOrder();
+      unsubscribeMyPharmacy();
     };
-  }, [user]);
+  }, [user, profile]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 pb-20">
@@ -275,6 +288,45 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* NEW: My Pharmacy Section for Owners */}
+      {profile?.role === 'pharmacy_owner' && (
+        <section 
+          onClick={() => navigate('/app/pharmacy-panel')}
+          className="bg-emerald-600 p-6 rounded-[2.5rem] shadow-2xl cursor-pointer relative overflow-hidden group border border-emerald-500"
+        >
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[80px] -mr-32 -mt-32"></div>
+          
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-6">
+            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-white border border-white/30 group-hover:scale-110 transition-transform duration-500">
+              <Store size={32} />
+            </div>
+            
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] bg-white/20 px-3 py-1 rounded-full border border-white/30">
+                  Gestão de Negócio
+                </span>
+                {myPharmacy && <span className="text-[10px] font-mono text-emerald-100 tracking-widest">{myPharmacy.name}</span>}
+              </div>
+              <h3 className="text-2xl font-black text-white tracking-tight mb-1">
+                Painel da <span className="text-emerald-100 italic">Minha Farmácia</span>
+              </h3>
+              <p className="text-sm text-emerald-50 font-medium">Gerencie o seu stock, visualize encomendas e acompanhe as suas vendas.</p>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="text-right hidden md:block">
+                <p className="text-[10px] font-black text-emerald-100 uppercase tracking-widest">Acesso Rápido</p>
+                <p className="text-xs font-bold text-white">Ir para o Painel Administrativo</p>
+              </div>
+              <div className="w-12 h-12 bg-white text-emerald-600 rounded-xl flex items-center justify-center shadow-lg group-hover:translate-x-2 transition-transform">
+                <ChevronRight size={24} />
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Active Order Tracking Banner - Hardware/Specialist vibe */}
       {activeOrder && (
