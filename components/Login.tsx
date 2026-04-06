@@ -150,10 +150,8 @@ const Login: React.FC = () => {
       <div className="absolute bottom-[-20%] left-[20%] w-[40%] h-[40%] bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-4000"></div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="flex justify-center">
-          <div className="bg-teal-600 p-3 rounded-2xl text-white shadow-xl shadow-teal-200">
-            <Heart size={32} fill="white" />
-          </div>
+        <div className="flex justify-center cursor-pointer" onClick={() => navigate('/')}>
+          <img src="/input_file_0.png" alt="Saúde Mais Logo" className="h-16 w-auto object-contain" referrerPolicy="no-referrer" />
         </div>
         <h2 className="mt-6 text-center text-3xl font-black text-slate-900 tracking-tight">
           {isLogin ? 'Entrar na sua conta' : 'Criar nova conta'}

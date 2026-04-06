@@ -26,8 +26,8 @@ export const MaintenanceGuard: React.FC<{ children: React.ReactNode }> = ({ chil
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-center">
         <div className="max-w-md w-full bg-white/5 backdrop-blur-xl p-12 rounded-[4rem] border border-white/10 shadow-2xl">
-          <div className="w-24 h-24 bg-amber-500/20 text-amber-500 rounded-[2rem] flex items-center justify-center mx-auto mb-8 animate-pulse">
-            <ShieldAlert size={48} />
+          <div className="flex justify-center mb-8">
+            <img src="/input_file_0.png" alt="Saúde Mais Logo" className="h-20 w-auto object-contain" referrerPolicy="no-referrer" />
           </div>
           <h2 className="text-3xl font-black text-white mb-4 italic tracking-tight">Estamos em Manutenção</h2>
           <p className="text-slate-400 font-bold leading-relaxed mb-10">

@@ -51,11 +51,8 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-100 h-screen fixed left-0 top-0">
         <div className="p-6 flex flex-col h-full">
-          <div className="flex items-center gap-3 mb-10 px-2 shrink-0">
-            <div className="bg-teal-600 p-2.5 rounded-2xl text-white shadow-lg shadow-teal-100">
-              <Heart size={24} fill="white" />
-            </div>
-            <span className="text-2xl font-black text-slate-900 tracking-tighter">Saúde <span className="text-teal-600">Mais</span></span>
+          <div className="flex items-center gap-3 mb-10 px-2 shrink-0 cursor-pointer" onClick={() => navigate('/app')}>
+            <img src="/input_file_0.png" alt="Saúde Mais Logo" className="h-12 w-auto object-contain" referrerPolicy="no-referrer" />
           </div>
           
           <nav className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
@@ -91,11 +88,8 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Mobile Header */}
       <header className="md:hidden flex items-center justify-between px-6 py-5 bg-white border-b border-slate-100 sticky top-0 z-50">
-        <div className="flex items-center gap-3">
-          <div className="bg-teal-600 p-2 rounded-xl text-white shadow-md">
-            <Heart size={18} fill="white" />
-          </div>
-          <span className="text-xl font-black text-slate-900 tracking-tighter">Saúde Mais</span>
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/app')}>
+          <img src="/input_file_0.png" alt="Saúde Mais Logo" className="h-10 w-auto object-contain" referrerPolicy="no-referrer" />
         </div>
         <div className="flex gap-2">
           <button onClick={() => navigate('/app/pharmacy-panel')} className="p-2.5 bg-slate-50 text-slate-500 rounded-xl hover:text-teal-600 transition-colors">
