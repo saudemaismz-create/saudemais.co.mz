@@ -158,6 +158,16 @@ export interface Reminder {
   createdAt: any;
 }
 
+export interface WellnessHabit {
+  id?: string;
+  userId: string;
+  type: 'water' | 'steps' | 'running' | 'eating';
+  value: number; // e.g., glasses of water, number of steps, minutes of running, score for eating
+  goal: number;
+  date: string; // YYYY-MM-DD
+  updatedAt: any;
+}
+
 export interface Dependent {
   id?: string;
   parentUid: string;

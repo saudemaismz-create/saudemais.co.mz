@@ -1,8 +1,7 @@
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, MessageSquare, User, Calendar, MapPin, Heart, ShoppingBag, ShoppingCart, ShieldAlert, FileText, Bell, Users, Sparkles } from 'lucide-react';
-import { useCart } from './CartContext';
+import { Home, Search, MessageSquare, User, Calendar, MapPin, Heart, ShieldAlert, FileText, Bell, Users, Sparkles, Activity, ShoppingBag } from 'lucide-react';
 import { useFirebase } from './FirebaseProvider';
 import { ToastProvider, useToast } from './ToastContext';
 
@@ -21,7 +20,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { itemCount } = useCart();
   const { profile } = useFirebase();
   const { showToast } = useToast();
 
@@ -31,12 +29,13 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
     { icon: Home, label: 'Início', path: '/app' },
     { icon: FileText, label: 'Receita', path: '/app/prescription' },
     { icon: Sparkles, label: 'IA+', path: '/app/assistant' },
+    { icon: Activity, label: 'Bem-Estar', path: '/app/wellness' },
     { icon: Bell, label: 'Lembretes', path: '/app/reminders' },
     { icon: MessageSquare, label: 'Chat', path: '/app/chat' },
     { icon: Users, label: 'Família', path: '/app/family' },
-    { icon: ShoppingBag, label: 'Minha Loja', path: '/app/pharmacy-panel' },
     { icon: Calendar, label: 'Agenda', path: '/app/bookings' },
     { icon: User, label: 'Perfil', path: '/app/profile' },
+    { icon: ShoppingBag, label: 'Minha Loja', path: '/app/pharmacy-panel' },
   ];
 
   if (profile?.role === 'admin') {
@@ -77,25 +76,6 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
               )}
             </button>
           ))}
-          
-          <div className="pt-4 mt-4 border-t border-slate-50 shrink-0">
-            <button
-              onClick={() => navigate('/app/checkout')}
-              className={`w-full flex items-center gap-4 px-6 py-4.5 rounded-[1.5rem] transition-all duration-500 relative group ${
-                location.pathname === '/app/checkout'
-                  ? 'bg-rose-600 text-white font-black shadow-2xl shadow-rose-200/50 scale-[1.02]'
-                  : 'text-slate-400 hover:bg-rose-50 hover:text-rose-600 font-bold'
-              }`}
-            >
-              <ShoppingCart size={24} strokeWidth={location.pathname === '/app/checkout' ? 2.5 : 2} className="transition-transform group-hover:scale-110" />
-              <span className="text-[15px] tracking-tight">Carrinho</span>
-              {itemCount > 0 && (
-                <span className="absolute right-6 bg-white text-rose-600 text-[11px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-md animate-pulse">
-                  {itemCount}
-                </span>
-              )}
-            </button>
-          </div>
         </nav>
         
         <div className="mt-auto p-6 bg-slate-900 rounded-[2rem] text-white shadow-2xl relative overflow-hidden group shrink-0">
@@ -118,16 +98,8 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
           <span className="text-xl font-black text-slate-900 tracking-tighter">Saúde Mais</span>
         </div>
         <div className="flex gap-2">
-          <button 
-            onClick={() => navigate('/app/checkout')}
-            className="p-2.5 bg-slate-50 text-slate-500 rounded-xl hover:text-teal-600 transition-colors relative"
-          >
-            <ShoppingCart size={22} />
-            {itemCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg">
-                {itemCount}
-              </span>
-            )}
+          <button onClick={() => navigate('/app/pharmacy-panel')} className="p-2.5 bg-slate-50 text-slate-500 rounded-xl hover:text-teal-600 transition-colors">
+            <ShoppingBag size={22} />
           </button>
           <button onClick={() => showToast('Localização em tempo real em desenvolvimento.', 'info')} className="p-2.5 bg-slate-50 text-slate-500 rounded-xl hover:text-teal-600 transition-colors">
             <MapPin size={22} />

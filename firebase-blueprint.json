@@ -199,6 +199,20 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["sessionId", "senderId", "text", "createdAt"]
+    },
+    "WellnessHabit": {
+      "title": "WellnessHabit",
+      "description": "A daily health habit tracked by the user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["water", "steps", "running", "eating"] },
+        "value": { "type": "number" },
+        "goal": { "type": "number" },
+        "date": { "type": "string", "format": "date" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "value", "goal", "date"]
     }
   },
   "firestore": {
@@ -249,6 +263,10 @@
     "/chat_messages/{messageId}": {
       "schema": "ChatMessage",
       "description": "Messages in chat sessions."
+    },
+    "/wellness_habits/{habitId}": {
+      "schema": "WellnessHabit",
+      "description": "Daily wellness habits tracked by users."
     }
   }
 }

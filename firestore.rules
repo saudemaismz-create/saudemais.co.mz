@@ -90,6 +90,16 @@ service cloud.firestore {
              data.status in ['active', 'paused', 'expired'];
     }
 
+    function isValidWellnessHabit(data) {
+      return hasOnlyAllowedFields(['userId', 'type', 'value', 'goal', 'date', 'updatedAt']) &&
+             data.userId is string &&
+             data.type in ['water', 'steps', 'running', 'eating'] &&
+             data.value is number &&
+             data.goal is number &&
+             isValidDateString(data.date) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
     // ===============================================================
     // Collection Rules
     // ===============================================================
@@ -182,6 +192,13 @@ service cloud.firestore {
         get(/databases/$(database)/documents/chat_sessions/$(request.resource.data.sessionId)).data.userId == request.auth.uid ||
         isPharmacyOwner(get(/databases/$(database)/documents/chat_sessions/$(request.resource.data.sessionId)).data.pharmacyId)
       );
+    }
+
+    match /wellness_habits/{habitId} {
+      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidWellnessHabit(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && isValidWellnessHabit(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
   }
 }

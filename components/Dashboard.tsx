@@ -227,7 +227,11 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="max-h-96 overflow-y-auto">
                   {notifications.map(notif => (
-                    <div key={notif.id} className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer ${!notif.read ? 'bg-teal-50/30' : ''}`}>
+                    <div 
+                      key={notif.id} 
+                      onClick={() => navigate('/app/wellness')}
+                      className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer ${!notif.read ? 'bg-teal-50/30' : ''}`}
+                    >
                       <div className="flex gap-3">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${notif.bg} ${notif.color}`}>
                           <notif.icon size={20} />
@@ -383,10 +387,10 @@ const Dashboard: React.FC = () => {
             Métricas de Saúde
           </h2>
           <button 
-            onClick={() => setShowHealthCalc(true)}
+            onClick={() => navigate('/app/wellness')}
             className="text-sm font-bold text-teal-600 hover:text-teal-700 bg-teal-50 px-4 py-2 rounded-xl transition-colors"
           >
-            Configurar Metas
+            Gerir Hábitos
           </button>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -396,7 +400,11 @@ const Dashboard: React.FC = () => {
             { label: 'Sono', val: formatSleep(liveMetrics.sleep), sub: `Meta: ${formatSleep(goals.sleep)}`, icon: Moon, color: 'text-indigo-600', bg: 'bg-indigo-50', gradient: 'from-indigo-500/10 to-transparent' },
             { label: 'Passos', val: liveMetrics.steps.toLocaleString(), sub: `Meta: ${goals.steps.toLocaleString()}`, icon: Footprints, color: 'text-emerald-600', bg: 'bg-emerald-50', gradient: 'from-emerald-500/10 to-transparent' },
           ].map((v, i) => (
-            <div key={i} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-1 hover:border-teal-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-500 relative overflow-hidden group">
+            <div 
+              key={i} 
+              onClick={() => navigate('/app/wellness')}
+              className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-1 hover:border-teal-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-500 relative overflow-hidden group cursor-pointer"
+            >
               <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${v.gradient} rounded-full -mr-10 -mt-10 transition-transform group-hover:scale-150 duration-700`}></div>
               <div className={`${v.bg} ${v.color} w-11 h-11 rounded-2xl flex items-center justify-center mb-3 shadow-inner relative z-10`}>
                 <v.icon size={22} strokeWidth={2.5} />

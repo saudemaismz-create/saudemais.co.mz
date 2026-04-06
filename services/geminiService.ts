@@ -121,3 +121,28 @@ export const analyzePrescription = async (base64Image: string): Promise<string[]
     throw error;
   }
 };
+
+export const getWellnessTips = async (type: 'water' | 'steps' | 'running' | 'eating'): Promise<string> => {
+  try {
+    const ai = getAI();
+    const prompts = {
+      water: "Dê uma dica rápida e motivadora sobre a importância de beber água hoje.",
+      steps: "Dê uma dica rápida e motivadora sobre caminhar e atingir metas de passos.",
+      running: "Dê uma dica rápida e motivadora para quem quer começar a correr ou melhorar a corrida.",
+      eating: "Dê uma dica rápida sobre alimentação saudável e alimentos nutritivos."
+    };
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompts[type],
+      config: {
+        systemInstruction: "Você é um coach de saúde motivador. Dê respostas curtas (máximo 2 frases) e em Português.",
+      },
+    });
+
+    return response.text || "Mantenha o foco na sua saúde!";
+  } catch (error) {
+    console.error("Wellness Tips Error:", error);
+    return "Mantenha o foco na sua saúde!";
+  }
+};
