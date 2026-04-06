@@ -23,15 +23,18 @@ import {
 } from 'lucide-react';
 import { useCart } from './CartContext';
 import { useFirebase } from './FirebaseProvider';
+import { useToast } from './ToastContext';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Order } from '../types';
 import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHandler';
+import { uploadFile } from '../utils/storage';
 
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const { items, total, removeItem, updateQuantity, clearCart } = useCart();
   const { user, profile } = useFirebase();
+  const { showToast } = useToast();
   
   const [step, setStep] = useState<'cart' | 'shipping' | 'payment' | 'success'>('cart');
   const [loading, setLoading] = useState(false);
@@ -58,35 +61,43 @@ const Checkout: React.FC = () => {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('A receita deve ter no máximo 2MB.', 'error');
+      return;
+    }
 
     setIsUploading(true);
-    // Simulate upload delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // In a real app, upload to Firebase Storage
-    // For this demo, we'll use a mock URL
-    setFormData(prev => ({ ...prev, prescriptionUrl: 'https://example.com/prescriptions/mock-prescription.jpg' }));
-    setIsUploading(false);
+    try {
+      const path = `prescriptions/${user.uid}/${Date.now()}_${file.name}`;
+      const url = await uploadFile(file, path);
+      setFormData(prev => ({ ...prev, prescriptionUrl: url }));
+      showToast('Receita anexada com sucesso!', 'success');
+    } catch (err) {
+      console.error('Upload error:', err);
+      showToast('Erro ao anexar receita.', 'error');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      alert('Geolocalização não suportada pelo seu navegador.');
+      showToast('Geolocalização não suportada pelo seu navegador.', 'warning');
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        // In a real app, use reverse geocoding to get address
-        // For now, we'll just set a placeholder
         setFormData(prev => ({ 
           ...prev, 
           address: `Localização GPS: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)} (Aprox. Av. Eduardo Mondlane)` 
         }));
+        showToast('Localização obtida com sucesso!', 'success');
       },
       () => {
-        alert('Não foi possível obter a sua localização.');
+        showToast('Não foi possível obter a sua localização.', 'error');
       }
     );
   };

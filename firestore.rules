@@ -95,15 +95,15 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && isValidUser(request.resource.data);
       allow update: if (isOwner(userId) && isValidUser(request.resource.data)) || isAdmin();
     }
 
     match /pharmacies/{pharmacyId} {
       allow read: if true;
-      allow create: if isAuthenticated() && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if isAuthenticated() && (isAdmin() || resource.data.ownerUid == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.ownerUid == request.auth.uid && isValidPharmacy(request.resource.data);
+      allow update: if isAuthenticated() && (isAdmin() || (resource.data.ownerUid == request.auth.uid && isValidPharmacy(request.resource.data)));
       allow delete: if isAdmin();
     }
 
@@ -115,9 +115,13 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.customerUid == request.auth.uid;
-      allow update: if isAuthenticated();
+      allow read: if isAuthenticated() && (isOwner(resource.data.customerUid) || isAdmin() || (resource.data.pharmacyIds.hasAny([get(/databases/$(database)/documents/users/$(request.auth.uid)).data.pharmacyId])));
+      allow create: if isAuthenticated() && request.resource.data.customerUid == request.auth.uid && isValidOrder(request.resource.data);
+      allow update: if isAuthenticated() && (
+        isAdmin() || 
+        (isOwner(resource.data.customerUid) && request.resource.data.status == resource.data.status) ||
+        (resource.data.pharmacyIds.hasAny([get(/databases/$(database)/documents/users/$(request.auth.uid)).data.pharmacyId]))
+      );
     }
 
     match /reviews/{reviewId} {

@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useFirebase } from './FirebaseProvider';
+import { useToast } from './ToastContext';
 import { Pharmacy, Order, UserProfile, PharmacyPlan, Medication } from '../types';
 import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHandler';
 import { useErrorBoundary } from 'react-error-boundary';
@@ -27,6 +28,7 @@ import { MOCK_ADMIN_PHARMACIES, MOCK_STORE_ORDERS, MOCK_USER } from '../constant
 const AdminDashboard: React.FC = () => {
   const { user, profile, isAuthReady } = useFirebase();
   const { showBoundary } = useErrorBoundary();
+  const { showToast } = useToast();
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -34,6 +36,9 @@ const AdminDashboard: React.FC = () => {
   const [ads, setAds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'pharmacies' | 'medications' | 'finances' | 'ads' | 'settings'>('overview');
+  const [medsPage, setMedsPage] = useState(1);
+  const [pharmPage, setPharmPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
   const [settings, setSettings] = useState({
     commissionRate: 10,
     featuredFee: 500,
@@ -283,7 +288,7 @@ const AdminDashboard: React.FC = () => {
       <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
         <div className="flex items-center justify-between mb-8">
           <h3 className="text-xl font-black text-slate-900">Campanhas Ativas</h3>
-          <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="bg-teal-600 text-white px-6 py-2 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-teal-700 transition-all">
+          <button onClick={() => showToast('Funcionalidade em desenvolvimento.', 'info')} className="bg-teal-600 text-white px-6 py-2 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-teal-700 transition-all">
             Nova Campanha
           </button>
         </div>
@@ -419,11 +424,11 @@ const AdminDashboard: React.FC = () => {
             <Shield className="text-teal-400" size={24} /> Segurança e Manutenção
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="bg-white/10 hover:bg-white/20 p-6 rounded-3xl border border-white/10 transition-all text-left group">
+            <button onClick={() => showToast('Funcionalidade em desenvolvimento.', 'info')} className="bg-white/10 hover:bg-white/20 p-6 rounded-3xl border border-white/10 transition-all text-left group">
               <h4 className="font-black text-sm mb-1 group-hover:text-teal-400">Backup do Sistema</h4>
               <p className="text-[10px] text-slate-400 font-medium">Último backup: Hoje, 04:00</p>
             </button>
-            <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="bg-white/10 hover:bg-white/20 p-6 rounded-3xl border border-white/10 transition-all text-left group">
+            <button onClick={() => showToast('Funcionalidade em desenvolvimento.', 'info')} className="bg-white/10 hover:bg-white/20 p-6 rounded-3xl border border-white/10 transition-all text-left group">
               <h4 className="font-black text-sm mb-1 group-hover:text-teal-400">Logs de Atividade</h4>
               <p className="text-[10px] text-slate-400 font-medium">Verificar acessos administrativos</p>
             </button>
@@ -442,81 +447,106 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
-  const renderMedications = () => (
-    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Gestão Global de Medicamentos</h2>
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Pesquisar medicamento..." 
-              className="pl-12 pr-6 py-3 bg-white border border-slate-100 rounded-2xl text-sm font-bold w-64 focus:ring-4 focus:ring-teal-500/10 shadow-sm"
-            />
+  const renderMedications = () => {
+    const totalPages = Math.ceil(medications.length / ITEMS_PER_PAGE);
+    const paginatedMeds = medications.slice((medsPage - 1) * ITEMS_PER_PAGE, medsPage * ITEMS_PER_PAGE);
+
+    return (
+      <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+         <div className="flex items-center justify-between">
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Gestão Global de Medicamentos</h2>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Pesquisar medicamento..." 
+                className="pl-12 pr-6 py-3 bg-white border border-slate-100 rounded-2xl text-sm font-bold w-64 focus:ring-4 focus:ring-teal-500/10 shadow-sm"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50/50 border-b border-slate-100">
-            <tr>
-              <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Medicamento</th>
-              <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Farmácia</th>
-              <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Preço</th>
-              <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Stock</th>
-              <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {medications.map((med) => {
-              const pharm = pharmacies.find(p => p.id === med.pharmacyId);
-              return (
-                <tr key={med.id} className="hover:bg-slate-50/30 transition-colors group">
-                  <td className="px-8 py-6">
-                    <div className="flex items-center gap-4">
-                      <img src={med.image} className="w-10 h-10 rounded-xl object-cover" alt={med.name} />
-                      <div>
-                        <p className="text-sm font-black text-slate-900">{med.name}</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{med.category}</p>
+        <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50/50 border-b border-slate-100">
+              <tr>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Medicamento</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Farmácia</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Preço</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Stock</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {paginatedMeds.map((med) => {
+                const pharm = pharmacies.find(p => p.id === med.pharmacyId);
+                return (
+                  <tr key={med.id} className="hover:bg-slate-50/30 transition-colors group">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-4">
+                        <img src={med.image} className="w-10 h-10 rounded-xl object-cover" alt={med.name} />
+                        <div>
+                          <p className="text-sm font-black text-slate-900">{med.name}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{med.category}</p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6">
-                    <span className="text-xs font-bold text-slate-600">{pharm?.name || 'Desconhecida'}</span>
-                  </td>
-                  <td className="px-8 py-6 font-black text-slate-900 font-mono text-sm">
-                    {med.price.toLocaleString()} MT
-                  </td>
-                  <td className="px-8 py-6">
-                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
-                      (med.stock || 0) < 10 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
-                    }`}>
-                      {med.stock || 0} un
-                    </span>
-                  </td>
-                  <td className="px-8 py-6 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="p-2 text-slate-400 hover:text-teal-600 transition-colors">
-                        <EditIcon size={18} />
-                      </button>
-                      <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="p-2 text-slate-400 hover:text-rose-600 transition-colors">
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {medications.length === 0 && (
-          <p className="text-center text-slate-400 font-medium py-10 italic">Nenhum medicamento registado.</p>
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className="text-xs font-bold text-slate-600">{pharm?.name || 'Desconhecida'}</span>
+                    </td>
+                    <td className="px-8 py-6 font-black text-slate-900 font-mono text-sm">
+                      {med.price.toLocaleString()} MT
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                        (med.stock || 0) < 10 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
+                      }`}>
+                        {med.stock || 0} un
+                      </span>
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => showToast('Funcionalidade em desenvolvimento.', 'info')} className="p-2 text-slate-400 hover:text-teal-600 transition-colors">
+                          <EditIcon size={18} />
+                        </button>
+                        <button onClick={() => showToast('Funcionalidade em desenvolvimento.', 'info')} className="p-2 text-slate-400 hover:text-rose-600 transition-colors">
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {medications.length === 0 && (
+            <p className="text-center text-slate-400 font-medium py-10 italic">Nenhum medicamento registado.</p>
+          )}
+        </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <button 
+              disabled={medsPage === 1}
+              onClick={() => setMedsPage(p => p - 1)}
+              className="px-4 py-2 bg-white border border-slate-100 rounded-xl text-xs font-black disabled:opacity-50"
+            >
+              ANTERIOR
+            </button>
+            <span className="text-xs font-black text-slate-400 mx-4">PÁGINA {medsPage} DE {totalPages}</span>
+            <button 
+              disabled={medsPage === totalPages}
+              onClick={() => setMedsPage(p => p + 1)}
+              className="px-4 py-2 bg-white border border-slate-100 rounded-xl text-xs font-black disabled:opacity-50"
+            >
+              PRÓXIMA
+            </button>
+          </div>
         )}
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderOverview = () => (
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
@@ -563,7 +593,7 @@ const AdminDashboard: React.FC = () => {
                   }`}>
                     {pharm.planId || 'Básico'}
                   </span>
-                  <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="p-2 text-slate-400 hover:text-teal-600 transition-colors">
+                  <button onClick={() => showToast('Funcionalidade em desenvolvimento.', 'info')} className="p-2 text-slate-400 hover:text-teal-600 transition-colors">
                     <ArrowUpRight size={18} />
                   </button>
                 </div>
@@ -617,74 +647,99 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
-  const renderPharmacies = () => (
-    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Gestão de Farmácias</h2>
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Pesquisar farmácia..." 
-              className="pl-12 pr-6 py-3 bg-white border border-slate-100 rounded-2xl text-sm font-bold w-64 focus:ring-4 focus:ring-teal-500/10 shadow-sm"
-            />
+  const renderPharmacies = () => {
+    const totalPages = Math.ceil(pharmacies.length / ITEMS_PER_PAGE);
+    const paginatedPharmacies = pharmacies.slice((pharmPage - 1) * ITEMS_PER_PAGE, pharmPage * ITEMS_PER_PAGE);
+
+    return (
+      <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+         <div className="flex items-center justify-between">
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Gestão de Farmácias</h2>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Pesquisar farmácia..." 
+                className="pl-12 pr-6 py-3 bg-white border border-slate-100 rounded-2xl text-sm font-bold w-64 focus:ring-4 focus:ring-teal-500/10 shadow-sm"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50/50 border-b border-slate-100">
-            <tr>
-              <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Farmácia</th>
-              <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Plano</th>
-              <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Vendas</th>
-              <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-              <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {pharmacies.map((pharm) => (
-              <tr key={pharm.id} className="hover:bg-slate-50/30 transition-colors group">
-                <td className="px-8 py-6">
-                  <div className="flex items-center gap-4">
-                    <img src={pharm.image} className="w-10 h-10 rounded-xl object-cover" alt={pharm.name} />
-                    <div>
-                      <p className="text-sm font-black text-slate-900">{pharm.name}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{pharm.address}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-8 py-6">
-                  <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
-                    pharm.planId === 'premium' ? 'bg-amber-50 text-amber-600' :
-                    pharm.planId === 'professional' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400'
-                  }`}>
-                    {pharm.planId || 'Básico'}
-                  </span>
-                </td>
-                <td className="px-8 py-6 font-black text-slate-900 font-mono text-sm">
-                  {orders.filter(o => o.pharmacyIds?.includes(pharm.id || '')).reduce((acc, o) => acc + (o.total || 0), 0).toLocaleString()} MT
-                </td>
-                <td className="px-8 py-6">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${pharm.isOpen ? 'bg-green-500' : 'bg-rose-500'}`}></div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{pharm.isOpen ? 'Ativa' : 'Inativa'}</span>
-                  </div>
-                </td>
-                <td className="px-8 py-6 text-right">
-                  <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="p-2 text-slate-400 hover:text-teal-600 transition-colors">
-                    <Edit3 size={18} />
-                  </button>
-                </td>
+        <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50/50 border-b border-slate-100">
+              <tr>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Farmácia</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Plano</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Vendas</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {paginatedPharmacies.map((pharm) => (
+                <tr key={pharm.id} className="hover:bg-slate-50/30 transition-colors group">
+                  <td className="px-8 py-6">
+                    <div className="flex items-center gap-4">
+                      <img src={pharm.image} className="w-10 h-10 rounded-xl object-cover" alt={pharm.name} />
+                      <div>
+                        <p className="text-sm font-black text-slate-900">{pharm.name}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{pharm.address}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6">
+                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                      pharm.planId === 'premium' ? 'bg-amber-50 text-amber-600' :
+                      pharm.planId === 'professional' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400'
+                    }`}>
+                      {pharm.planId || 'Básico'}
+                    </span>
+                  </td>
+                  <td className="px-8 py-6 font-black text-slate-900 font-mono text-sm">
+                    {orders.filter(o => o.pharmacyIds?.includes(pharm.id || '')).reduce((acc, o) => acc + (o.total || 0), 0).toLocaleString()} MT
+                  </td>
+                  <td className="px-8 py-6">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${pharm.isOpen ? 'bg-green-500' : 'bg-rose-500'}`}></div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{pharm.isOpen ? 'Ativa' : 'Inativa'}</span>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6 text-right">
+                    <button onClick={() => showToast('Funcionalidade em desenvolvimento.', 'info')} className="p-2 text-slate-400 hover:text-teal-600 transition-colors">
+                      <Edit3 size={18} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <button 
+              disabled={pharmPage === 1}
+              onClick={() => setPharmPage(p => p - 1)}
+              className="px-4 py-2 bg-white border border-slate-100 rounded-xl text-xs font-black disabled:opacity-50"
+            >
+              ANTERIOR
+            </button>
+            <span className="text-xs font-black text-slate-400 mx-4">PÁGINA {pharmPage} DE {totalPages}</span>
+            <button 
+              disabled={pharmPage === totalPages}
+              onClick={() => setPharmPage(p => p + 1)}
+              className="px-4 py-2 bg-white border border-slate-100 rounded-xl text-xs font-black disabled:opacity-50"
+            >
+              PRÓXIMA
+            </button>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-20">

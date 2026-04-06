@@ -21,9 +21,11 @@ import {
 import { db, auth, googleProvider } from '../firebase';
 import { signInWithPopup } from 'firebase/auth';
 import { useFirebase } from './FirebaseProvider';
+import { useToast } from './ToastContext';
 import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHandler';
 import { useErrorBoundary } from 'react-error-boundary';
 import { GoogleGenAI } from "@google/genai";
+import { uploadFile } from '../utils/storage';
 
 const SALES_DATA = [
   { name: 'Seg', sales: 4000, orders: 24 },
@@ -39,6 +41,7 @@ const StoreDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, profile, isAuthReady } = useFirebase();
   const { showBoundary } = useErrorBoundary();
+  const { showToast } = useToast();
   const [myPharmacy, setMyPharmacy] = useState<Pharmacy | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'inventory' | 'orders' | 'finances' | 'plans' | 'ads'>('overview');
   const [inventory, setInventory] = useState<Medication[]>([]);
@@ -76,7 +79,7 @@ const StoreDashboard: React.FC = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newMed, setNewMed] = useState<Partial<Medication>>({
-    name: '', price: 0, category: 'Geral', description: '', requiresPrescription: false,
+    name: '', price: undefined, category: 'Geral', description: '', requiresPrescription: false,
     stock: 0, expiryDate: '', stockAlertThreshold: 10,
     image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400'
   });
@@ -177,33 +180,53 @@ const StoreDashboard: React.FC = () => {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 1024 * 1024) {
-        alert('A imagem deve ter no máximo 1MB.');
-        return;
+    if (!file || !user) return;
+
+    if (file.size > 1024 * 1024) {
+      showToast('A imagem deve ter no máximo 1MB.', 'error');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const path = `pharmacies/${user.uid}/${Date.now()}_${file.name}`;
+      const url = await uploadFile(file, path);
+      setStoreForm({ ...storeForm, image: url });
+      
+      if (myPharmacy) {
+        await updateDoc(doc(db, 'pharmacies', myPharmacy.id!), { image: url });
+        showToast('Logotipo atualizado com sucesso!', 'success');
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setStoreForm({ ...storeForm, image: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Upload error:', err);
+      showToast('Erro ao carregar imagem.', 'error');
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const handleMedImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMedImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 1024 * 1024) {
-        alert('A imagem deve ter no máximo 1MB.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewMed({ ...newMed, image: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+    if (!file || !user) return;
+
+    if (file.size > 1024 * 1024) {
+      showToast('A imagem deve ter no máximo 1MB.', 'error');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const path = `medications/${user.uid}/${Date.now()}_${file.name}`;
+      const url = await uploadFile(file, path);
+      setNewMed({ ...newMed, image: url });
+      showToast('Imagem do produto carregada!', 'success');
+    } catch (err) {
+      console.error('Upload error:', err);
+      showToast('Erro ao carregar imagem.', 'error');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -211,7 +234,7 @@ const StoreDashboard: React.FC = () => {
     if (e) e.preventDefault();
     if (!user || actionLoading) return;
     if (!storeForm.name || !storeForm.address || !storeForm.phone) {
-      alert("Por favor, preencha os campos obrigatórios.");
+      showToast("Por favor, preencha os campos obrigatórios.", 'warning');
       return;
     }
     setActionLoading(true);
@@ -276,9 +299,25 @@ const StoreDashboard: React.FC = () => {
       };
       await addDoc(collection(db, 'medications'), medData);
       setIsAdding(false);
-      setNewMed({ name: '', price: 0, category: 'Geral', description: '', requiresPrescription: false, stock: 0, expiryDate: '', stockAlertThreshold: 10 });
+      setNewMed({ 
+        name: '', 
+        price: undefined, 
+        category: 'Geral', 
+        description: '', 
+        requiresPrescription: false, 
+        stock: 0, 
+        expiryDate: '', 
+        stockAlertThreshold: 10,
+        image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400'
+      });
+      showToast('Produto publicado com sucesso no marketplace!', 'success');
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'medications');
+      try {
+        handleFirestoreError(error, OperationType.CREATE, 'medications');
+      } catch (err) {
+        console.error('Error saving medication:', err);
+        showToast('Erro ao publicar produto. Por favor, verifique se todos os campos estão corretos.', 'error');
+      }
     } finally {
       setActionLoading(false);
     }
@@ -709,7 +748,7 @@ const StoreDashboard: React.FC = () => {
                     <p className="text-center text-slate-400 font-medium py-10">Nenhuma encomenda registada.</p>
                   )}
                 </div>
-                <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="w-full mt-8 py-4 bg-slate-50 text-slate-500 font-black text-xs rounded-2xl hover:bg-slate-100 transition-all flex items-center justify-center gap-2">
+                <button onClick={() => showToast('Funcionalidade em desenvolvimento.', 'info')} className="w-full mt-8 py-4 bg-slate-50 text-slate-500 font-black text-xs rounded-2xl hover:bg-slate-100 transition-all flex items-center justify-center gap-2">
                   VER TODAS <ChevronRight size={14} />
                 </button>
               </div>
@@ -746,7 +785,7 @@ const StoreDashboard: React.FC = () => {
                       className="pl-12 pr-6 py-3 bg-white border border-slate-100 rounded-2xl text-sm font-bold w-64 focus:ring-4 focus:ring-teal-500/10 shadow-sm"
                     />
                   </div>
-                  <button className="p-3 bg-white text-slate-400 rounded-2xl border border-slate-100 hover:text-teal-600 transition-all shadow-sm" onClick={() => alert('Funcionalidade em desenvolvimento.')}>
+                  <button className="p-3 bg-white text-slate-400 rounded-2xl border border-slate-100 hover:text-teal-600 transition-all shadow-sm" onClick={() => showToast('Funcionalidade em desenvolvimento.', 'info')}>
                     <Filter size={18} />
                   </button>
                 </div>
@@ -939,7 +978,7 @@ const StoreDashboard: React.FC = () => {
                 <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Painel Financeiro</h2>
                 <p className="text-slate-400 font-medium">Gestão de ganhos, comissões e pagamentos</p>
               </div>
-              <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="px-6 py-3 bg-slate-900 text-white font-black rounded-2xl shadow-xl hover:scale-105 transition-all flex items-center gap-2">
+              <button onClick={() => showToast('Funcionalidade em desenvolvimento.', 'info')} className="px-6 py-3 bg-slate-900 text-white font-black rounded-2xl shadow-xl hover:scale-105 transition-all flex items-center gap-2">
                 <FileText size={18} /> EXPORTAR RELATÓRIO
               </button>
             </div>
@@ -966,7 +1005,7 @@ const StoreDashboard: React.FC = () => {
                 <p className="text-4xl font-black font-mono tracking-tighter">
                   {(myPharmacy?.balance || 0).toLocaleString()} MT
                 </p>
-                <button onClick={() => alert('Funcionalidade de saque em processamento.')} className="mt-6 w-full py-3 bg-white text-teal-600 font-black rounded-xl hover:bg-teal-50 transition-colors text-sm">
+                <button onClick={() => showToast('Funcionalidade de saque em processamento.', 'info')} className="mt-6 w-full py-3 bg-white text-teal-600 font-black rounded-xl hover:bg-teal-50 transition-colors text-sm">
                   SOLICITAR LEVANTAMENTO
                 </button>
               </div>
@@ -1217,8 +1256,11 @@ const StoreDashboard: React.FC = () => {
                       type="number" 
                       className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-teal-500/10 font-bold"
                       placeholder="0.00"
-                      value={newMed.price || ''}
-                      onChange={e => setNewMed({...newMed, price: Number(e.target.value)})}
+                      value={newMed.price === undefined ? '' : newMed.price}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setNewMed({...newMed, price: val === '' ? undefined : Number(val)});
+                      }}
                     />
                   </div>
                 </div>
@@ -1317,9 +1359,17 @@ const StoreDashboard: React.FC = () => {
               </div>
               <button 
                 onClick={handleSaveNew}
-                className="w-full py-5 bg-teal-600 text-white font-black rounded-2xl shadow-xl shadow-teal-100 hover:scale-[1.02] transition-all"
+                disabled={!newMed.name || !newMed.price || !myPharmacy || actionLoading}
+                className="w-full py-5 bg-teal-600 text-white font-black rounded-2xl shadow-xl shadow-teal-100 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
               >
-                PUBLICAR NO MARKETPLACE
+                {actionLoading ? (
+                  <>
+                    <Loader2 className="animate-spin" size={24} />
+                    <span>A PUBLICAR...</span>
+                  </>
+                ) : (
+                  'PUBLICAR NO MARKETPLACE'
+                )}
               </button>
             </div>
           </div>

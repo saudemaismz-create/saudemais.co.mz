@@ -4,16 +4,26 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Search, MessageSquare, User, Calendar, MapPin, Heart, ShoppingBag, ShoppingCart, ShieldAlert, FileText, Bell, Users, Sparkles } from 'lucide-react';
 import { useCart } from './CartContext';
 import { useFirebase } from './FirebaseProvider';
+import { ToastProvider, useToast } from './ToastContext';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+  return (
+    <ToastProvider>
+      <LayoutContent>{children}</LayoutContent>
+    </ToastProvider>
+  );
+};
+
+const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { itemCount } = useCart();
   const { profile } = useFirebase();
+  const { showToast } = useToast();
 
   const isAppRoute = location.pathname.startsWith('/app');
 
@@ -92,7 +102,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="absolute top-0 left-0 w-full h-full bg-teal-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
           <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Emergência</p>
           <p className="text-2xl font-black mb-3 text-teal-500">112 / 119</p>
-          <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="w-full py-3 bg-white text-slate-900 rounded-xl text-xs font-black shadow-sm hover:scale-105 transition-transform active:scale-95">
+          <button onClick={() => showToast('Ligando para a emergência...', 'info')} className="w-full py-3 bg-white text-slate-900 rounded-xl text-xs font-black shadow-sm hover:scale-105 transition-transform active:scale-95">
             LIGAR AGORA
           </button>
         </div>
@@ -119,7 +129,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </span>
             )}
           </button>
-          <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="p-2.5 bg-slate-50 text-slate-500 rounded-xl hover:text-teal-600 transition-colors">
+          <button onClick={() => showToast('Localização em tempo real em desenvolvimento.', 'info')} className="p-2.5 bg-slate-50 text-slate-500 rounded-xl hover:text-teal-600 transition-colors">
             <MapPin size={22} />
           </button>
         </div>
