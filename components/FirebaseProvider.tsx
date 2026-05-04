@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { UserProfile } from '../types';
 import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHandler';
@@ -11,6 +11,7 @@ interface FirebaseContextType {
   profile: UserProfile | null;
   loading: boolean;
   isAuthReady: boolean;
+  unreadCount: number;
 }
 
 const FirebaseContext = createContext<FirebaseContextType>({
@@ -18,6 +19,7 @@ const FirebaseContext = createContext<FirebaseContextType>({
   profile: null,
   loading: true,
   isAuthReady: false,
+  unreadCount: 0,
 });
 
 export const useFirebase = () => useContext(FirebaseContext);
@@ -27,13 +29,16 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { showBoundary } = useErrorBoundary();
 
   useEffect(() => {
     let profileUnsubscribe: (() => void) | null = null;
+    let notificationsUnsubscribe: (() => void) | null = null;
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+      
       if (firebaseUser) {
         try {
           const profileRef = doc(db, 'users', firebaseUser.uid);
@@ -52,9 +57,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   setProfile(data);
                 }
               } else {
-                // Create default profile
                 const isAdminEmail = firebaseUser.email?.toLowerCase().includes('caneabacarhimiacane');
-                
                 const newProfile: UserProfile = {
                   uid: firebaseUser.uid,
                   name: firebaseUser.displayName || 'Usuário',
@@ -75,6 +78,19 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }
           });
 
+          // Notifications listener
+          const unreadQuery = query(
+            collection(db, 'notifications'),
+            where('userId', '==', firebaseUser.uid),
+            where('read', '==', false)
+          );
+
+          notificationsUnsubscribe = onSnapshot(unreadQuery, (snapshot) => {
+            setUnreadCount(snapshot.size);
+          }, (error) => {
+            console.error("Error fetching unread count:", error);
+          });
+
           // Detect location once per session
           navigator.geolocation.getCurrentPosition(async (position) => {
             try {
@@ -89,6 +105,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }, (error) => {
             console.error("Error getting location:", error);
           });
+
         } catch (error) {
           try {
             handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
@@ -101,7 +118,12 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           profileUnsubscribe();
           profileUnsubscribe = null;
         }
+        if (notificationsUnsubscribe) {
+          notificationsUnsubscribe();
+          notificationsUnsubscribe = null;
+        }
         setProfile(null);
+        setUnreadCount(0);
       }
       setLoading(false);
       setIsAuthReady(true);
@@ -109,14 +131,13 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     return () => {
       unsubscribe();
-      if (profileUnsubscribe) {
-        profileUnsubscribe();
-      }
+      if (profileUnsubscribe) profileUnsubscribe();
+      if (notificationsUnsubscribe) notificationsUnsubscribe();
     };
   }, [showBoundary]);
 
   return (
-    <FirebaseContext.Provider value={{ user, profile, loading, isAuthReady }}>
+    <FirebaseContext.Provider value={{ user, profile, loading, isAuthReady, unreadCount }}>
       {children}
     </FirebaseContext.Provider>
   );

@@ -4,7 +4,7 @@ import { TrendingUp, Search, MapPin, Pill, Activity, ShieldCheck, Calendar, Bell
 import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getHealthNews } from '../services/geminiService';
-import { collection, onSnapshot, query, limit, where, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit, where, orderBy, writeBatch, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Pharmacy, Medication, Order } from '../types';
 import { useFirebase } from './FirebaseProvider';
@@ -27,6 +27,7 @@ const Dashboard: React.FC = () => {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [myPharmacy, setMyPharmacy] = useState<Pharmacy | null>(null);
+  const [realNotifications, setRealNotifications] = useState<any[]>([]);
 
   // Health Metrics State
   const [showHealthCalc, setShowHealthCalc] = useState(false);
@@ -83,28 +84,22 @@ const Dashboard: React.FC = () => {
     return `${h}h ${m}m`;
   };
 
-  const notifications = [
-    {
-      id: 1,
-      title: 'Resumo Diário',
-      message: `Você deu ${liveMetrics.steps.toLocaleString()} passos hoje e dormiu ${formatSleep(liveMetrics.sleep)}. Continue assim!`,
-      time: 'Agora mesmo',
-      read: false,
-      icon: TrendingUp,
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-50'
-    },
-    {
-      id: 2,
-      title: 'Hidratação',
-      message: `Lembre-se de beber água! Você atingiu ${(liveMetrics.hydration / goals.hydration * 100).toFixed(0)}% da sua meta.`,
-      time: 'Há 2 horas',
-      read: true,
-      icon: Droplets,
-      color: 'text-blue-600',
-      bg: 'bg-blue-50'
+  const markAllAsRead = async () => {
+    if (!user || realNotifications.length === 0) return;
+    const unread = realNotifications.filter(n => !n.read);
+    if (unread.length === 0) return;
+
+    try {
+      const batch = writeBatch(db);
+      unread.forEach(notif => {
+        const docRef = doc(db, 'notifications', notif.id);
+        batch.update(docRef, { read: true });
+      });
+      await batch.commit();
+    } catch (error) {
+      console.error("Error marking all as read:", error);
     }
-  ];
+  };
 
   useEffect(() => {
     getHealthNews().then(setNews);
@@ -179,11 +174,27 @@ const Dashboard: React.FC = () => {
       }
     });
 
+    // Fetch Notifications
+    let unsubscribeNotifications = () => {};
+    if (user) {
+      const qNotifications = query(
+        collection(db, 'notifications'),
+        where('userId', '==', user.uid),
+        orderBy('createdAt', 'desc'),
+        limit(5)
+      );
+      unsubscribeNotifications = onSnapshot(qNotifications, (snapshot) => {
+        const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setRealNotifications(docs);
+      });
+    }
+
     return () => {
       unsubscribePharmacies();
       unsubscribeMedications();
       unsubscribeOrder();
       unsubscribeMyPharmacy();
+      unsubscribeNotifications();
     };
   }, [user, profile]);
 
@@ -215,7 +226,9 @@ const Dashboard: React.FC = () => {
               className="relative p-2.5 bg-white rounded-2xl border border-slate-100 text-slate-400 hover:text-teal-600 transition-all hover:shadow-lg shadow-sm"
             >
               <Bell size={24} />
-              <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 border-2 border-white rounded-full"></span>
+              {realNotifications.some(n => !n.read) && (
+                <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 border-2 border-white rounded-full"></span>
+              )}
             </button>
 
             {/* Notifications Dropdown */}
@@ -223,32 +236,64 @@ const Dashboard: React.FC = () => {
               <div className="absolute right-0 mt-3 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
                 <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                   <h3 className="font-bold text-slate-800">Notificações</h3>
-                  <span className="text-xs font-black text-teal-600 bg-teal-100 px-2 py-1 rounded-full">1 Nova</span>
+                  {realNotifications.filter(n => !n.read).length > 0 && (
+                    <span className="text-xs font-black text-teal-600 bg-teal-100 px-2 py-1 rounded-full">
+                      {realNotifications.filter(n => !n.read).length} Novas
+                    </span>
+                  )}
                 </div>
                 <div className="max-h-96 overflow-y-auto">
-                  {notifications.map(notif => (
-                    <div 
-                      key={notif.id} 
-                      onClick={() => navigate('/app/wellness')}
-                      className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer ${!notif.read ? 'bg-teal-50/30' : ''}`}
-                    >
-                      <div className="flex gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${notif.bg} ${notif.color}`}>
-                          <notif.icon size={20} />
-                        </div>
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <h4 className={`text-sm font-bold ${!notif.read ? 'text-slate-900' : 'text-slate-700'}`}>{notif.title}</h4>
-                            <span className="text-[10px] font-bold text-slate-400">{notif.time}</span>
+                  {realNotifications.length > 0 ? realNotifications.map(notif => {
+                    const date = notif.createdAt?.toDate ? notif.createdAt.toDate() : new Date(notif.createdAt);
+                    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    
+                    return (
+                      <div 
+                        key={notif.id} 
+                        onClick={() => {
+                          setShowNotifications(false);
+                          navigate('/app/notifications');
+                        }}
+                        className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer ${!notif.read ? 'bg-teal-50/30' : ''}`}
+                      >
+                        <div className="flex gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-teal-50 text-teal-600`}>
+                            <Bell size={20} />
                           </div>
-                          <p className="text-xs text-slate-500 leading-relaxed">{notif.message}</p>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <h4 className={`text-sm font-bold ${!notif.read ? 'text-slate-900' : 'text-slate-700'} truncate max-w-[140px]`}>{notif.title}</h4>
+                              <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap ml-2">{timeStr}</span>
+                            </div>
+                            <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">{notif.message}</p>
+                          </div>
                         </div>
                       </div>
+                    );
+                  }) : (
+                    <div className="p-10 text-center text-slate-400">
+                      <p className="text-sm font-medium">Nenhuma notificação</p>
                     </div>
-                  ))}
+                  )}
                 </div>
-                <div className="p-3 bg-slate-50 border-t border-slate-100 text-center">
-                  <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="text-xs font-bold text-teal-600 hover:text-teal-700">Marcar todas como lidas</button>
+                <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <button 
+                    onClick={() => {
+                      setShowNotifications(false);
+                      navigate('/app/notifications');
+                    }} 
+                    className="text-xs font-bold text-slate-500 hover:text-teal-600 transition-colors"
+                  >
+                    Ver todas
+                  </button>
+                  {realNotifications.some(n => !n.read) && (
+                    <button 
+                      onClick={markAllAsRead} 
+                      className="text-xs font-black text-teal-600 hover:text-teal-700 bg-white px-3 py-1.5 rounded-lg border border-teal-100 shadow-sm"
+                    >
+                      Lidas
+                    </button>
+                  )}
                 </div>
               </div>
             )}

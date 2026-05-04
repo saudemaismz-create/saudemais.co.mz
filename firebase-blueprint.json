@@ -213,6 +213,21 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "type", "value", "goal", "date"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A system or user notification.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The recipient user UID." },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "success", "warning", "error"] },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "actionUrl": { "type": "string", "description": "Optional URL to navigate to." }
+      },
+      "required": ["userId", "title", "message", "read", "createdAt"]
     }
   },
   "firestore": {
@@ -267,6 +282,10 @@
     "/wellness_habits/{habitId}": {
       "schema": "WellnessHabit",
       "description": "Daily wellness habits tracked by users."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications."
     }
   }
 }

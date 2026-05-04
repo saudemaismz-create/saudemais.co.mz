@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, MessageSquare, User, Calendar, MapPin, Heart, ShieldAlert, FileText, Bell, Users, Sparkles, Activity, ShoppingBag } from 'lucide-react';
+import { Home, Search, MessageSquare, User, Calendar, MapPin, Heart, ShieldAlert, FileText, Bell, Users, Sparkles, Activity, ShoppingBag, PhoneCall } from 'lucide-react';
 import { useFirebase } from './FirebaseProvider';
 import { ToastProvider, useToast } from './ToastContext';
 
@@ -20,17 +20,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile } = useFirebase();
+  const { profile, unreadCount } = useFirebase();
   const { showToast } = useToast();
 
   const isAppRoute = location.pathname.startsWith('/app');
 
   const navItems = [
     { icon: Home, label: 'Início', path: '/app' },
+    { icon: Bell, label: 'Notificações', path: '/app/notifications', badge: unreadCount },
     { icon: FileText, label: 'Receita', path: '/app/prescription' },
     { icon: Sparkles, label: 'IA+', path: '/app/assistant' },
     { icon: Activity, label: 'Bem-Estar', path: '/app/wellness' },
-    { icon: Bell, label: 'Lembretes', path: '/app/reminders' },
     { icon: MessageSquare, label: 'Chat', path: '/app/chat' },
     { icon: Users, label: 'Família', path: '/app/family' },
     { icon: Calendar, label: 'Agenda', path: '/app/bookings' },
@@ -52,7 +52,10 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-100 h-screen fixed left-0 top-0">
         <div className="p-6 flex flex-col h-full">
           <div className="flex items-center gap-3 mb-10 px-2 shrink-0 cursor-pointer" onClick={() => navigate('/app')}>
-            <img src="/input_file_0.png" alt="Saúde Mais Logo" className="h-12 w-auto object-contain" referrerPolicy="no-referrer" />
+            <div className="w-12 h-12 bg-teal-600 rounded-2xl flex items-center justify-center shadow-lg shadow-teal-200/50">
+              <Activity className="text-white" size={28} />
+            </div>
+            <span className="text-xl font-black text-slate-900 tracking-tighter">Saúde <span className="text-teal-600">Mais</span></span>
           </div>
           
           <nav className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
@@ -66,7 +69,14 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                   : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800 font-bold'
               }`}
             >
-              <item.icon size={24} strokeWidth={location.pathname === item.path ? 2.5 : 2} className="transition-transform group-hover:scale-110" />
+              <div className="relative group-hover:scale-110 transition-transform">
+                <item.icon size={24} strokeWidth={location.pathname === item.path ? 2.5 : 2} />
+                {(item as any).badge > 0 && (
+                  <span className="absolute -top-2 -right-2 w-5 h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                    {(item as any).badge}
+                  </span>
+                )}
+              </div>
               <span className="text-[15px] tracking-tight">{item.label}</span>
               {location.pathname === item.path && (
                 <div className="absolute right-0 top-0 h-full w-1 bg-white/20"></div>
@@ -79,7 +89,11 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
           <div className="absolute top-0 left-0 w-full h-full bg-teal-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
           <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Emergência</p>
           <p className="text-2xl font-black mb-3 text-teal-500">112 / 119</p>
-          <button onClick={() => showToast('Ligando para a emergência...', 'info')} className="w-full py-3 bg-white text-slate-900 rounded-xl text-xs font-black shadow-sm hover:scale-105 transition-transform active:scale-95">
+          <button 
+            onClick={() => window.location.href = 'tel:112'} 
+            className="w-full py-3 bg-white text-slate-900 rounded-xl text-xs font-black shadow-sm hover:scale-105 transition-transform active:scale-95 flex items-center justify-center gap-2"
+          >
+            <PhoneCall size={14} className="text-rose-600" />
             LIGAR AGORA
           </button>
         </div>
@@ -89,9 +103,19 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
       {/* Mobile Header */}
       <header className="md:hidden flex items-center justify-between px-6 py-5 bg-white border-b border-slate-100 sticky top-0 z-50">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/app')}>
-          <img src="/input_file_0.png" alt="Saúde Mais Logo" className="h-10 w-auto object-contain" referrerPolicy="no-referrer" />
+          <div className="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-200/50">
+            <Activity className="text-white" size={22} />
+          </div>
+          <span className="text-lg font-black text-slate-900 tracking-tighter">Saúde <span className="text-teal-600">Mais</span></span>
         </div>
         <div className="flex gap-2">
+          <button 
+            onClick={() => window.location.href = 'tel:112'} 
+            className="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-colors shadow-sm border border-rose-100 flex items-center gap-2"
+          >
+            <PhoneCall size={20} />
+            <span className="text-[10px] font-black uppercase tracking-tighter">SOS</span>
+          </button>
           <button onClick={() => navigate('/app/pharmacy-panel')} className="p-2.5 bg-slate-50 text-slate-500 rounded-xl hover:text-teal-600 transition-colors">
             <ShoppingBag size={22} />
           </button>
@@ -120,7 +144,14 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
               {location.pathname === item.path && (
                 <div className="absolute -top-1 w-12 h-1 bg-teal-600 rounded-full blur-[2px]"></div>
               )}
-              <item.icon size={26} strokeWidth={location.pathname === item.path ? 3 : 2} />
+              <div className="relative">
+                <item.icon size={26} strokeWidth={location.pathname === item.path ? 3 : 2} />
+                {(item as any).badge > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                    {(item as any).badge}
+                  </span>
+                )}
+              </div>
               <span className={`text-[10px] mt-2 font-black uppercase tracking-tighter ${location.pathname === item.path ? 'opacity-100' : 'opacity-60'}`}>{item.label}</span>
             </button>
           ))}

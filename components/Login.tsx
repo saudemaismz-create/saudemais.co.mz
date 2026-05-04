@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { Heart, MapPin, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Heart, MapPin, AlertCircle, Loader2, Eye, EyeOff, Activity } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useFirebase } from './FirebaseProvider';
 
@@ -150,8 +150,11 @@ const Login: React.FC = () => {
       <div className="absolute bottom-[-20%] left-[20%] w-[40%] h-[40%] bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-4000"></div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="flex justify-center cursor-pointer" onClick={() => navigate('/')}>
-          <img src="/input_file_0.png" alt="Saúde Mais Logo" className="h-16 w-auto object-contain" referrerPolicy="no-referrer" />
+        <div className="flex flex-col items-center justify-center cursor-pointer mb-8" onClick={() => navigate('/')}>
+          <div className="w-20 h-20 bg-teal-600 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-teal-200 mb-4">
+            <Activity className="text-white" size={40} />
+          </div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tighter">Saúde <span className="text-teal-600">Mais</span></h1>
         </div>
         <h2 className="mt-6 text-center text-3xl font-black text-slate-900 tracking-tight">
           {isLogin ? 'Entrar na sua conta' : 'Criar nova conta'}
