@@ -48,6 +48,8 @@ export interface Pharmacy {
   balance?: number;
   joinedAt?: any;
   featured?: boolean;
+  responseRate?: number; // 0-100
+  deliveryTime?: number; // Minutes
 }
 
 export interface PharmacyPlan {
@@ -93,10 +95,12 @@ export interface Order {
   customerName: string;
   customerUid: string;
   items: CartItem[];
+  subtotal?: number;
+  shippingFee?: number;
   total: number;
   commissionAmount?: number;
   netAmount?: number; // Total - Commission
-  status: 'Pendente' | 'Em Processamento' | 'Em Trânsito' | 'Entregue' | 'Cancelado';
+  status: 'Pendente' | 'Em Processamento' | 'Em Trânsito' | 'Entregue' | 'Cancelado' | 'Processando' | 'Pronto' | 'Saiu para entrega';
   createdAt: any; // Firestore Timestamp
   address: string;
   phone: string;

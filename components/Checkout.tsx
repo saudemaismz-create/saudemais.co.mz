@@ -19,7 +19,8 @@ import {
   X,
   FileText,
   Upload,
-  Navigation
+  Navigation,
+  Sparkles
 } from 'lucide-react';
 import { useCart } from './CartContext';
 import { useFirebase } from './FirebaseProvider';
@@ -46,6 +47,20 @@ const Checkout: React.FC = () => {
     paymentMethod: 'paysuite' as 'mpesa' | 'emola' | 'paysuite',
     prescriptionUrl: ''
   });
+
+  const calculateShipping = () => {
+    const addr = formData.address.toLowerCase();
+    const isMaputo = addr.includes('maputo');
+    const isMatola = addr.includes('matola');
+
+    if ((isMaputo || isMatola) && total > 1000) return 0;
+    if (isMaputo) return 100;
+    if (isMatola) return 150; // Standard for Matola if not free
+    return 0; // Default or local pickup
+  };
+
+  const shippingFee = calculateShipping();
+  const finalTotal = total + shippingFee;
 
   const requiresPrescription = items.some(item => item.requiresPrescription);
   const [isUploading, setIsUploading] = useState(false);
@@ -113,6 +128,12 @@ const Checkout: React.FC = () => {
       return;
     }
 
+    if (!formData.phone || formData.phone.length < 9) {
+      setError('Por favor, introduza um número de telemóvel válido.');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setIsProcessingPayment(true);
@@ -120,22 +141,27 @@ const Checkout: React.FC = () => {
 
     try {
       // 1. Initiate Payment via Server
-      const paymentResponse = await fetch('/api/payment/initiate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: total,
-          phone: formData.phone,
-          provider: formData.paymentMethod,
-          orderId: `ORD_${Date.now()}`
-        })
-      });
-
-      if (!paymentResponse.ok) {
-        throw new Error('Falha ao iniciar o pagamento.');
+      let paymentResponse;
+      try {
+        paymentResponse = await fetch('/api/payment/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: finalTotal,
+            phone: formData.phone,
+            provider: formData.paymentMethod,
+            orderId: `ORD_${Date.now()}`
+          })
+        });
+      } catch (fetchErr) {
+        throw new Error('Erro de conexão com o servidor de pagamentos.');
       }
 
       const paymentData = await paymentResponse.json();
+
+      if (!paymentResponse.ok) {
+        throw new Error(paymentData.error || 'Falha ao iniciar o pagamento.');
+      }
       
       if (!paymentData.success) {
         throw new Error(paymentData.error || 'Erro no pagamento.');
@@ -145,11 +171,13 @@ const Checkout: React.FC = () => {
       // In a real app, you would poll the status or wait for a webhook
       await new Promise(resolve => setTimeout(resolve, 4500));
 
-      const orderData: Omit<Order, 'id'> = {
+      const orderData: any = {
         customerName: profile.name,
         customerUid: user.uid,
         items: items,
-        total: total,
+        subtotal: total,
+        shippingFee: shippingFee,
+        total: finalTotal,
         status: 'Pendente',
         createdAt: serverTimestamp(),
         address: formData.address,
@@ -280,7 +308,12 @@ const Checkout: React.FC = () => {
         {step !== 'success' && (
           <div className="lg:w-1/3 order-1 lg:order-2 space-y-6">
             <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-50">
-              <h3 className="text-xl font-black text-slate-900 mb-6 tracking-tight">Resumo</h3>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-black text-slate-900 tracking-tight">Resumo</h3>
+                <div className="px-3 py-1 bg-amber-50 text-amber-600 text-[10px] font-black rounded-xl border border-amber-100 flex items-center gap-1.5 uppercase tracking-widest">
+                  <Sparkles size={12} className="fill-amber-600" /> IA Otimizada
+                </div>
+              </div>
               
               <div className="space-y-4 mb-8">
                 <div className="flex justify-between text-slate-500 font-bold">
@@ -289,12 +322,14 @@ const Checkout: React.FC = () => {
                 </div>
                 <div className="flex justify-between text-slate-500 font-bold">
                   <span>Entrega</span>
-                  <span className="text-teal-600">Grátis</span>
+                  <span className={shippingFee === 0 ? "text-teal-600" : "text-slate-900"}>
+                    {shippingFee === 0 ? 'Grátis' : shippingFee.toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' })}
+                  </span>
                 </div>
                 <div className="pt-4 border-t border-slate-100 flex justify-between items-end">
                   <span className="text-slate-900 font-black">Total</span>
                   <span className="text-3xl font-black text-teal-600 tracking-tighter">
-                    {total.toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' })}
+                    {finalTotal.toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' })}
                   </span>
                 </div>
               </div>

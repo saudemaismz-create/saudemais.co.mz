@@ -1,16 +1,19 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search as SearchIcon, MapPin, Pill, Info, ChevronRight, Star, ShoppingCart, Plus, Check } from 'lucide-react';
+import { Search as SearchIcon, MapPin, Pill, Info, ChevronRight, Star, ShoppingCart, Plus, Check, Sparkles, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Medication, Pharmacy } from '../types';
 import { handleFirestoreError, OperationType } from '../utils/firestoreErrorHandler';
 import { useCart } from './CartContext';
+import { useFirebase } from './FirebaseProvider';
+import { getSmartRankedMedications } from '../utils/smartSearch';
 import { MOCK_PHARMACIES, MOCK_MEDICATIONS } from '../constants';
 
 const Search: React.FC = () => {
   const navigate = useNavigate();
+  const { profile } = useFirebase();
   const [queryStr, setQueryStr] = useState('');
   const [activeTab, setActiveTab] = useState<'meds' | 'pharmacies'>('meds');
   const [medications, setMedications] = useState<Medication[]>([]);
@@ -23,18 +26,23 @@ const Search: React.FC = () => {
     const qMeds = query(collection(db, 'medications'));
     const unsubscribeMeds = onSnapshot(qMeds, (snapshot) => {
       const mData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Medication));
-      setMedications(mData);
+      // Fallback to mock if empty
+      setMedications(mData.length > 0 ? mData : MOCK_MEDICATIONS);
       setLoading(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'medications');
+      console.error('Meds Fetch Error:', error);
+      setMedications(MOCK_MEDICATIONS);
+      setLoading(false);
     });
 
     const qPharms = query(collection(db, 'pharmacies'));
     const unsubscribePharms = onSnapshot(qPharms, (snapshot) => {
       const pData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Pharmacy));
-      setPharmacies(pData);
+      // Fallback to mock if empty
+      setPharmacies(pData.length > 0 ? pData : MOCK_PHARMACIES);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'pharmacies');
+      console.error('Pharms Fetch Error:', error);
+      setPharmacies(MOCK_PHARMACIES);
     });
 
     return () => {
@@ -44,18 +52,30 @@ const Search: React.FC = () => {
   }, []);
 
   const filteredMeds = useMemo(() => {
+    const cleanQuery = queryStr.trim().toLowerCase();
     const filtered = medications.filter(m => 
-      m.name.toLowerCase().includes(queryStr.toLowerCase()) || 
-      m.category.toLowerCase().includes(queryStr.toLowerCase())
+      m.name.toLowerCase().includes(cleanQuery) || 
+      m.category.toLowerCase().includes(cleanQuery) ||
+      m.description?.toLowerCase().includes(cleanQuery)
     );
-    // Sort: Sponsored first
-    return [...filtered].sort((a, b) => (b.isSponsored ? 1 : 0) - (a.isSponsored ? 1 : 0));
-  }, [queryStr, medications]);
+    
+    // Use Smart AI Ranking
+    const ranked = getSmartRankedMedications(filtered, pharmacies, profile?.location);
+    
+    // Ensure sponsored items still get a boost but with smart logic
+    return ranked.sort((a, b) => (b.isSponsored ? 1 : 0) - (a.isSponsored ? 1 : 0));
+  }, [queryStr, medications, pharmacies, profile]);
+
+  const bestChoiceId = useMemo(() => {
+    if (!queryStr || filteredMeds.length === 0) return null;
+    return filteredMeds[0].id;
+  }, [filteredMeds, queryStr]);
 
   const filteredPharmacies = useMemo(() => {
+    const cleanQuery = queryStr.trim().toLowerCase();
     const filtered = pharmacies.filter(p => 
-      p.name.toLowerCase().includes(queryStr.toLowerCase()) || 
-      p.address.toLowerCase().includes(queryStr.toLowerCase())
+      p.name.toLowerCase().includes(cleanQuery) || 
+      p.address.toLowerCase().includes(cleanQuery)
     );
     // Sort: Featured first
     return [...filtered].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
@@ -81,10 +101,18 @@ const Search: React.FC = () => {
           <input 
             type="text"
             placeholder={activeTab === 'meds' ? "Nome do remédio (ex: Paracetamol)..." : "Farmácia por nome ou bairro..."}
-            className="w-full pl-14 pr-6 py-5 bg-slate-50 border-none rounded-3xl focus:ring-4 focus:ring-teal-500/10 transition-all font-medium text-lg"
+            className="w-full pl-14 pr-12 py-5 bg-slate-50 border-none rounded-3xl focus:ring-4 focus:ring-teal-500/10 transition-all font-medium text-lg"
             value={queryStr}
             onChange={(e) => setQueryStr(e.target.value)}
           />
+          {queryStr && (
+            <button 
+              onClick={() => setQueryStr('')}
+              className="absolute right-5 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"
+            >
+              <X size={20} />
+            </button>
+          )}
         </div>
 
         <div className="flex gap-4 mt-8">
@@ -123,6 +151,11 @@ const Search: React.FC = () => {
                 {med.isSponsored && (
                   <div className="absolute top-0 right-0 bg-teal-600 text-white text-[8px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-widest">
                     Patrocinado
+                  </div>
+                )}
+                {bestChoiceId === med.id && (
+                  <div className="absolute top-0 left-0 bg-amber-400 text-slate-900 text-[8px] font-black px-3 py-1.5 rounded-br-xl uppercase tracking-widest shadow-sm flex items-center gap-1.5 z-10">
+                    <Sparkles size={10} className="fill-slate-900" /> Inteligência Saúde+ recomendada
                   </div>
                 )}
                 <img 

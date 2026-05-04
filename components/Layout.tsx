@@ -27,6 +27,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
 
   const navItems = [
     { icon: Home, label: 'Início', path: '/app' },
+    { icon: Search, label: 'Pesquisar', path: '/app/search' },
     { icon: Bell, label: 'Notificações', path: '/app/notifications', badge: unreadCount },
     { icon: FileText, label: 'Receita', path: '/app/prescription' },
     { icon: Sparkles, label: 'IA+', path: '/app/assistant' },

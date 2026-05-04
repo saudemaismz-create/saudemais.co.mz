@@ -72,6 +72,7 @@ const App: React.FC = () => {
                     <Route path="/app/pharmacy-panel" element={<AuthGuard><StoreDashboard /></AuthGuard>} />
                     <Route path="/app/admin" element={<AuthGuard><AdminDashboard /></AuthGuard>} />
                     <Route path="/app/checkout" element={<AuthGuard><Checkout /></AuthGuard>} />
+                    <Route path="/app/search" element={<AuthGuard><Search /></AuthGuard>} />
                     <Route path="/app/product/:id" element={<AuthGuard><ProductDetail /></AuthGuard>} />
                     <Route path="/app/bookings" element={<AuthGuard><div className="flex flex-col items-center justify-center py-20">
                       <div className="bg-white p-12 rounded-3xl border border-slate-100 shadow-sm text-center">
