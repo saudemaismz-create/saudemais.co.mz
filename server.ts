@@ -22,79 +22,91 @@ async function startServer() {
       sanitizedPhone = '258' + sanitizedPhone;
     }
 
-    console.log(`Initiating ${provider} payment via PaySuite for order ${orderId}: ${amount} MT to ${sanitizedPhone}`);
+    console.log(`Initiating ${provider} payment for order ${orderId}: ${amount} MT to ${sanitizedPhone}`);
 
     try {
-      // PaySuite API Integration
-      // Using Paytek/PaySuite common API structure for MZ
-      const apiToken = process.env.PAYSUITE_API_KEY;
-      let rawUrl = (process.env.PAYSUITE_API_URL || 'https://api.paytek.co.mz/v1/c2b/payment').trim();
-      
-      // Basic URL validation and normalization
-      if (!rawUrl.startsWith('http')) {
-        rawUrl = 'https://' + rawUrl;
-      }
-      
-      const apiUrl = rawUrl;
+      if (provider === 'mpesa') {
+        const mpesaKey = process.env.MPESA_API_KEY;
+        const mpesaUrl = process.env.MPESA_API_URL;
 
-      if (!apiToken) {
-        console.warn('PAYSUITE_API_KEY not set. Falling back to mock.');
-        // Mocking for now if no key is provided
-        setTimeout(() => {
-          console.log(`USSD Push sent to ${sanitizedPhone}`);
-        }, 1000);
+        if (!mpesaKey || !mpesaUrl) {
+          console.warn('MPESA_API_KEY or MPESA_API_URL not set. Falling back to mock.');
+          return res.json({
+            success: true,
+            transactionId: `MPESA_MOCK_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+            message: 'M-Pesa: USSD Push enviado com sucesso (Simulado).'
+          });
+        }
+
+        // Dedicated M-Pesa API structure
+        const response = await axios.post(mpesaUrl, {
+          amount: Number(amount),
+          msisdn: sanitizedPhone,
+          reference: orderId,
+          description: `Pagamento Saude Mais - M-Pesa`,
+          transactionReference: orderId
+        }, {
+          headers: {
+            'Authorization': `Bearer ${mpesaKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 15000
+        });
 
         return res.json({
           success: true,
-          transactionId: `MOCK_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-          message: 'USSD Push enviado com sucesso via PaySuite (Simulado). Por favor, confirme no seu telemóvel.'
+          transactionId: response.data.transactionId || response.data.id,
+          message: 'M-Pesa: USSD Push enviado. Por favor, confirme no seu telemóvel.'
+        });
+
+      } else if (provider === 'emola') {
+        const emolaKey = process.env.EMOLA_API_KEY;
+        const emolaUrl = process.env.EMOLA_API_URL;
+
+        if (!emolaKey || !emolaUrl) {
+          console.warn('EMOLA_API_KEY or EMOLA_API_URL not set. Falling back to mock.');
+          return res.json({
+            success: true,
+            transactionId: `EMOLA_MOCK_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+            message: 'e-Mola: USSD Push enviado com sucesso (Simulado).'
+          });
+        }
+
+        // Dedicated e-Mola API structure
+        const response = await axios.post(emolaUrl, {
+          amount: Number(amount),
+          msisdn: sanitizedPhone,
+          referenceId: orderId,
+          description: `Pagamento Saude Mais - e-Mola`
+        }, {
+          headers: {
+            'Authorization': `Bearer ${emolaKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 15000
+        });
+
+        return res.json({
+          success: true,
+          transactionId: response.data.transactionId || response.data.id,
+          message: 'e-Mola: USSD Push enviado. Por favor, confirme no seu telemóvel.'
         });
       }
 
-      console.log(`Using PaySuite URL: ${apiUrl} for phone: ${sanitizedPhone}`);
-
-      const response = await axios.post(apiUrl, {
-        amount: Number(amount),
-        msisdn: sanitizedPhone, // Keeping as string to avoid precision/formatting issues
-        reference: orderId,
-        description: `Pagamento Saude Mais - Pedido ${orderId}`,
-        provider: (provider === 'paysuite' || !provider) ? 'mpesa' : provider // Default to mpesa if generic paysuite or nothing selected
-      }, {
-        headers: {
-          'Authorization': `Bearer ${apiToken}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        timeout: 15000 // 15s timeout for mobile payment processing
-      });
-
-      console.log('PaySuite Response Status:', response.status);
-      res.json({
-        success: true,
-        transactionId: response.data.transactionId || response.data.id || response.data.reference || `REF_${Date.now()}`,
-        message: response.data.message || 'USSD Push enviado com sucesso. Por favor, confirme no seu telemóvel.'
-      });
+      throw new Error('Provedor de pagamento não suportado.');
     } catch (error: any) {
-      // Improved error reporting
-      let errorMsg = 'Falha crítica na comunicação com a operadora.';
-      
+      let errorMsg = 'Falha na comunicação com o sistema de pagamento.';
       if (error.response) {
-        // The server responded with a status code outside the 2xx range
         errorMsg = error.response.data?.message || error.response.data?.error || `Erro de servidor: ${error.response.status}`;
-        console.error('PaySuite Server Error:', error.response.data);
       } else if (error.request) {
-        // The request was made but no response was received
-        errorMsg = 'A operadora não respondeu a tempo. Verifique se o seu número está correto.';
-        console.error('PaySuite Network/Timeout:', error.message);
+        errorMsg = 'Tempo de espera excedido. Verifique sua conexão.';
       } else {
-        // Something happened in setting up the request that triggered an Error
-        errorMsg = error.message === 'Invalid URL' ? 'Configuração de URL de pagamento inválida.' : error.message;
-        console.error('PaySuite Request Setup Error:', error.message);
+        errorMsg = error.message;
       }
 
       res.status(500).json({
         success: false,
-        error: `Erro PaySuite: ${errorMsg}.`
+        error: `Erro de Pagamento: ${errorMsg}`
       });
     }
   });
@@ -102,9 +114,9 @@ async function startServer() {
   // Payment Status Route
   app.get('/api/payment/status', (req, res) => {
     res.json({
-      configured: !!process.env.PAYSUITE_API_KEY,
-      mode: process.env.PAYSUITE_API_KEY ? 'Produção (PaySuite)' : 'Simulado (Mock)',
-      provider: 'PaySuite'
+      mpesa: !!process.env.MPESA_API_KEY,
+      emola: !!process.env.EMOLA_API_KEY,
+      mode: (process.env.MPESA_API_KEY || process.env.EMOLA_API_KEY) ? 'Produção' : 'Simulado'
     });
   });
 

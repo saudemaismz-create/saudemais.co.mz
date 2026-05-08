@@ -5,11 +5,13 @@ import {
   Search, Filter, CheckCircle2, XCircle, 
   AlertCircle, TrendingUp, ArrowUpRight, 
   ArrowDownRight, LayoutDashboard, Settings as SettingsIcon,
-  CreditCard, Megaphone, FileText, Pill, Trash2, Edit3 as EditIcon
+  CreditCard, Megaphone, FileText, Pill, Trash2, Edit3 as EditIcon,
+  Plus, X, Image as ImageIcon
 } from 'lucide-react';
 import { 
   collection, query, onSnapshot, updateDoc, 
-  doc, getDocs, where, orderBy, limit, setDoc, serverTimestamp 
+  doc, getDocs, where, orderBy, limit, setDoc, 
+  addDoc, deleteDoc, serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useFirebase } from './FirebaseProvider';
@@ -47,6 +49,12 @@ const AdminDashboard: React.FC = () => {
   });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [gatewayStatus, setGatewayStatus] = useState<any>(null);
+
+  // CRUD State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<'pharmacy' | 'medication' | null>(null);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!isAuthReady) return;
@@ -159,6 +167,69 @@ const AdminDashboard: React.FC = () => {
       handleFirestoreError(error, OperationType.WRITE, 'settings/global');
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const handleSavePharmacy = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      if (editingItem?.id) {
+        await updateDoc(doc(db, 'pharmacies', editingItem.id), editingItem);
+        showToast('Farmácia atualizada com sucesso!', 'success');
+      } else {
+        await addDoc(collection(db, 'pharmacies'), {
+          ...editingItem,
+          isOpen: true,
+          rating: 4.5,
+          reviews: 0,
+          featured: false,
+          createdAt: serverTimestamp()
+        });
+        showToast('Farmácia adicionada com sucesso!', 'success');
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'pharmacies');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveMedication = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const medData = {
+        ...editingItem,
+        price: Number(editingItem.price),
+        stock: Number(editingItem.stock)
+      };
+      if (editingItem?.id) {
+        await updateDoc(doc(db, 'medications', editingItem.id), medData);
+        showToast('Medicamento atualizado com sucesso!', 'success');
+      } else {
+        await addDoc(collection(db, 'medications'), {
+          ...medData,
+          createdAt: serverTimestamp()
+        });
+        showToast('Medicamento adicionado com sucesso!', 'success');
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'medications');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteItem = async (id: string, type: 'pharmacies' | 'medications') => {
+    if (!window.confirm('Tem certeza que deseja excluir este item?')) return;
+    try {
+      await deleteDoc(doc(db, type, id));
+      showToast('Item excluído com sucesso!', 'success');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${type}/${id}`);
     }
   };
 
@@ -456,6 +527,16 @@ const AdminDashboard: React.FC = () => {
          <div className="flex items-center justify-between">
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">Gestão Global de Medicamentos</h2>
           <div className="flex items-center gap-4">
+            <button 
+              onClick={() => {
+                setModalType('medication');
+                setEditingItem({ name: '', price: 0, stock: 0, category: '', pharmacyId: '', image: '', description: '' });
+                setIsModalOpen(true);
+              }}
+              className="bg-teal-600 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-teal-700 transition-all shadow-lg shadow-teal-100"
+            >
+              <Plus size={18} /> Novo Medicamento
+            </button>
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
@@ -507,10 +588,20 @@ const AdminDashboard: React.FC = () => {
                     </td>
                     <td className="px-8 py-6 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => showToast('Funcionalidade em desenvolvimento.', 'info')} className="p-2 text-slate-400 hover:text-teal-600 transition-colors">
+                        <button 
+                          onClick={() => {
+                            setModalType('medication');
+                            setEditingItem(med);
+                            setIsModalOpen(true);
+                          }} 
+                          className="p-2 text-slate-400 hover:text-teal-600 transition-colors"
+                        >
                           <EditIcon size={18} />
                         </button>
-                        <button onClick={() => showToast('Funcionalidade em desenvolvimento.', 'info')} className="p-2 text-slate-400 hover:text-rose-600 transition-colors">
+                        <button 
+                          onClick={() => handleDeleteItem(med.id!, 'medications')} 
+                          className="p-2 text-slate-400 hover:text-rose-600 transition-colors"
+                        >
                           <Trash2 size={18} />
                         </button>
                       </div>
@@ -656,6 +747,16 @@ const AdminDashboard: React.FC = () => {
          <div className="flex items-center justify-between">
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">Gestão de Farmácias</h2>
           <div className="flex items-center gap-4">
+            <button 
+              onClick={() => {
+                setModalType('pharmacy');
+                setEditingItem({ name: '', address: '', phone: '', image: '', rating: 4.5, isOpen: true, planId: 'basic' });
+                setIsModalOpen(true);
+              }}
+              className="bg-teal-600 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-teal-700 transition-all shadow-lg shadow-teal-100"
+            >
+              <Plus size={18} /> Nova Farmácia
+            </button>
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
@@ -708,9 +809,24 @@ const AdminDashboard: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-8 py-6 text-right">
-                    <button onClick={() => showToast('Funcionalidade em desenvolvimento.', 'info')} className="p-2 text-slate-400 hover:text-teal-600 transition-colors">
-                      <Edit3 size={18} />
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button 
+                        onClick={() => {
+                          setModalType('pharmacy');
+                          setEditingItem(pharm);
+                          setIsModalOpen(true);
+                        }} 
+                        className="p-2 text-slate-400 hover:text-teal-600 transition-colors"
+                      >
+                        <EditIcon size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteItem(pharm.id!, 'pharmacies')} 
+                        className="p-2 text-slate-400 hover:text-rose-600 transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -801,6 +917,156 @@ const AdminDashboard: React.FC = () => {
         {activeTab === 'ads' && renderAds()}
         {activeTab === 'settings' && renderSettings()}
       </main>
+
+      {/* CRUD MODAL */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100">
+            <div className="px-10 py-8 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                  {editingItem?.id ? 'Editar' : 'Novo'} {modalType === 'pharmacy' ? 'Farmácia' : 'Medicamento'}
+                </h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  Preencha os dados abaixo
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="w-12 h-12 bg-white text-slate-400 hover:text-rose-500 rounded-2xl flex items-center justify-center transition-all shadow-sm"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <form onSubmit={modalType === 'pharmacy' ? handleSavePharmacy : handleSaveMedication} className="p-10 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome</label>
+                  <input 
+                    required
+                    value={editingItem.name}
+                    onChange={e => setEditingItem({ ...editingItem, name: e.target.value })}
+                    className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 focus:ring-4 focus:ring-teal-500/10 placeholder:text-slate-300"
+                    placeholder="Ex: Paracetamol 500mg"
+                  />
+                </div>
+
+                {modalType === 'medication' ? (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preço (MT)</label>
+                      <input 
+                        required
+                        type="number"
+                        value={editingItem.price}
+                        onChange={e => setEditingItem({ ...editingItem, price: e.target.value })}
+                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 focus:ring-4 focus:ring-teal-500/10"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Stock (Unidades)</label>
+                      <input 
+                        required
+                        type="number"
+                        value={editingItem.stock}
+                        onChange={e => setEditingItem({ ...editingItem, stock: e.target.value })}
+                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 focus:ring-4 focus:ring-teal-500/10"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoria</label>
+                      <select 
+                        required
+                        value={editingItem.category}
+                        onChange={e => setEditingItem({ ...editingItem, category: e.target.value })}
+                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 focus:ring-4 focus:ring-teal-500/10"
+                      >
+                        <option value="">Selecionar...</option>
+                        <option value="Analgésicos">Analgésicos</option>
+                        <option value="Anti-inflamatórios">Anti-inflamatórios</option>
+                        <option value="Antibióticos">Antibióticos</option>
+                        <option value="Vitaminas">Vitaminas</option>
+                        <option value="Outros">Outros</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Farmácia Responsável</label>
+                      <select 
+                        required
+                        value={editingItem.pharmacyId}
+                        onChange={e => setEditingItem({ ...editingItem, pharmacyId: e.target.value })}
+                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 focus:ring-4 focus:ring-teal-500/10"
+                      >
+                        <option value="">Selecionar Farmácia...</option>
+                        {pharmacies.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Telefone</label>
+                      <input 
+                        required
+                        value={editingItem.phone}
+                        onChange={e => setEditingItem({ ...editingItem, phone: e.target.value })}
+                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 focus:ring-4 focus:ring-teal-500/10"
+                        placeholder="+258..."
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço Completo</label>
+                      <input 
+                        required
+                        value={editingItem.address}
+                        onChange={e => setEditingItem({ ...editingItem, address: e.target.value })}
+                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 focus:ring-4 focus:ring-teal-500/10"
+                        placeholder="Ex: Av. Eduardo Mondlane, Maputo"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">URL da Imagem</label>
+                  <div className="flex gap-4">
+                    <input 
+                      required
+                      value={editingItem.image}
+                      onChange={e => setEditingItem({ ...editingItem, image: e.target.value })}
+                      className="flex-1 bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 focus:ring-4 focus:ring-teal-500/10"
+                      placeholder="https://exemplo.com/imagem.jpg"
+                    />
+                    <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 overflow-hidden">
+                      {editingItem.image ? <img src={editingItem.image} className="w-full h-full object-cover" /> : <ImageIcon size={20} />}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-6">
+                <button 
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 px-8 py-4 bg-slate-100 text-slate-600 rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex-[2] px-8 py-4 bg-teal-600 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-teal-700 transition-all shadow-xl shadow-teal-100 disabled:opacity-50"
+                >
+                  {isSaving ? 'A SALVAR...' : 'GUARDAR ALTERAÇÕES'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

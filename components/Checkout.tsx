@@ -44,7 +44,7 @@ const Checkout: React.FC = () => {
   const [formData, setFormData] = useState({
     address: '',
     phone: '',
-    paymentMethod: 'paysuite' as 'mpesa' | 'emola' | 'paysuite',
+    paymentMethod: 'mpesa' as 'mpesa' | 'emola',
     prescriptionUrl: ''
   });
 
@@ -527,19 +527,7 @@ const Checkout: React.FC = () => {
                 exit={{ opacity: 0, y: -20 }}
                 className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-50 space-y-8"
               >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  <button 
-                    onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'paysuite' }))}
-                    className={`p-8 rounded-[2.5rem] border-4 transition-all flex flex-col items-center gap-4 ${
-                      formData.paymentMethod === 'paysuite' 
-                        ? 'border-teal-600 bg-teal-50/30' 
-                        : 'border-slate-100 hover:border-slate-200'
-                    }`}
-                  >
-                    <div className="w-16 h-16 bg-teal-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl">P</div>
-                    <span className="font-black text-slate-900">PaySuite</span>
-                  </button>
-
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <button 
                     onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'mpesa' }))}
                     className={`p-8 rounded-[2.5rem] border-4 transition-all flex flex-col items-center gap-4 ${
@@ -548,8 +536,8 @@ const Checkout: React.FC = () => {
                         : 'border-slate-100 hover:border-slate-200'
                     }`}
                   >
-                    <div className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl">M</div>
-                    <span className="font-black text-slate-900">M-Pesa</span>
+                    <div className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-red-100">M</div>
+                    <span className="font-black text-slate-900">M-Pesa (Vodacom)</span>
                   </button>
 
                   <button 
@@ -560,8 +548,8 @@ const Checkout: React.FC = () => {
                         : 'border-slate-100 hover:border-slate-200'
                     }`}
                   >
-                    <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center text-white font-black text-2xl">E</div>
-                    <span className="font-black text-slate-900">e-Mola</span>
+                    <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-orange-100">E</div>
+                    <span className="font-black text-slate-900">e-Mola (Movitel)</span>
                   </button>
                 </div>
 
