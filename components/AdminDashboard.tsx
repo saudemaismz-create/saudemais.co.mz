@@ -6,7 +6,7 @@ import {
   AlertCircle, TrendingUp, ArrowUpRight, 
   ArrowDownRight, LayoutDashboard, Settings as SettingsIcon,
   CreditCard, Megaphone, FileText, Pill, Trash2, Edit3 as EditIcon,
-  Plus, X, Image as ImageIcon
+  Plus, X, Image as ImageIcon, Activity
 } from 'lucide-react';
 import { 
   collection, query, onSnapshot, updateDoc, 
@@ -52,7 +52,7 @@ const AdminDashboard: React.FC = () => {
 
   // CRUD State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<'pharmacy' | 'medication' | null>(null);
+  const [modalType, setModalType] = useState<'pharmacy' | 'medication' | 'ad' | null>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -223,7 +223,35 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteItem = async (id: string, type: 'pharmacies' | 'medications') => {
+  const handleSaveAd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const adData = {
+        ...editingItem,
+        cost: Number(editingItem.cost),
+        active: editingItem.active !== undefined ? editingItem.active : true,
+        updatedAt: serverTimestamp()
+      };
+      if (editingItem?.id) {
+        await updateDoc(doc(db, 'ads', editingItem.id), adData);
+        showToast('Campanha atualizada com sucesso!', 'success');
+      } else {
+        await addDoc(collection(db, 'ads'), {
+          ...adData,
+          createdAt: serverTimestamp()
+        });
+        showToast('Campanha adicionada com sucesso!', 'success');
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'ads');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteItem = async (id: string, type: 'pharmacies' | 'medications' | 'ads') => {
     if (!window.confirm('Tem certeza que deseja excluir este item?')) return;
     try {
       await deleteDoc(doc(db, type, id));
@@ -358,36 +386,78 @@ const AdminDashboard: React.FC = () => {
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
       <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
         <div className="flex items-center justify-between mb-8">
-          <h3 className="text-xl font-black text-slate-900">Campanhas Ativas</h3>
-          <button onClick={() => showToast('Funcionalidade em desenvolvimento.', 'info')} className="bg-teal-600 text-white px-6 py-2 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-teal-700 transition-all">
-            Nova Campanha
+          <h3 className="text-xl font-black text-slate-900 tracking-tight">Propaganda & Marketing</h3>
+          <button 
+            onClick={() => {
+              setModalType('ad');
+              setEditingItem({ title: '', subtitle: '', type: 'banner', image: '', link: '', active: true, cost: 0, priority: 1 });
+              setIsModalOpen(true);
+            }} 
+            className="bg-teal-600 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-teal-700 transition-all shadow-lg shadow-teal-100 flex items-center gap-2"
+          >
+            <Plus size={18} /> Nova Campanha
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[
-            { title: 'Banner Principal - Farmácia Central', type: 'Banner', status: 'Ativo', reach: '12.4k', clicks: '842' },
-            { title: 'Destaque Paracetamol - Farmácia 24h', type: 'Sponsored', status: 'Ativo', reach: '8.2k', clicks: '521' },
-          ].map((ad, i) => (
-            <div key={i} className="p-6 rounded-[2rem] border border-slate-100 bg-slate-50/50 hover:shadow-lg transition-all">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h4 className="font-black text-slate-900">{ad.title}</h4>
-                  <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">{ad.type}</span>
+          {ads.map((ad, i) => (
+            <div key={ad.id || i} className="p-6 rounded-[2rem] border border-slate-100 bg-slate-50/50 hover:shadow-lg transition-all group overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150"></div>
+              
+              <div className="flex justify-between items-start mb-4 relative z-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white shadow-sm">
+                    <img src={ad.image} className="w-full h-full object-cover" alt={ad.title} />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-slate-900 tracking-tight">{ad.title}</h4>
+                    <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">{ad.type}</span>
+                  </div>
                 </div>
-                <span className="px-3 py-1 bg-green-100 text-green-700 text-[10px] font-black rounded-lg uppercase tracking-widest">{ad.status}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 text-[10px] font-black rounded-lg uppercase tracking-widest ${ad.active ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
+                    {ad.active ? 'Ativo' : 'Pausado'}
+                  </span>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 mt-6">
-                <div className="bg-white p-4 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alcance</p>
-                  <p className="text-xl font-black text-slate-900 font-mono">{ad.reach}</p>
+              
+              <div className="grid grid-cols-2 gap-4 mt-6 relative z-10">
+                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Custo Total</p>
+                  <p className="text-xl font-black text-slate-900 font-mono tracking-tighter">{(ad.cost || 0).toLocaleString()} MT</p>
                 </div>
-                <div className="bg-white p-4 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliques</p>
-                  <p className="text-xl font-black text-slate-900 font-mono">{ad.clicks}</p>
+                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cliques</p>
+                  <p className="text-xl font-black text-slate-900 font-mono tracking-tighter">{ad.clicks || 0}</p>
                 </div>
+              </div>
+
+              <div className="mt-6 flex items-center justify-end gap-2 relative z-10">
+                <button 
+                  onClick={() => {
+                    setModalType('ad');
+                    setEditingItem(ad);
+                    setIsModalOpen(true);
+                  }}
+                  className="p-3 bg-white text-slate-400 hover:text-teal-600 rounded-xl border border-slate-100 shadow-sm transition-all"
+                >
+                  <EditIcon size={18} />
+                </button>
+                <button 
+                  onClick={() => handleDeleteItem(ad.id, 'ads')}
+                  className="p-3 bg-white text-slate-400 hover:text-rose-600 rounded-xl border border-slate-100 shadow-sm transition-all"
+                >
+                  <Trash2 size={18} />
+                </button>
               </div>
             </div>
           ))}
+          {ads.length === 0 && (
+            <div className="col-span-full py-20 text-center bg-slate-50 rounded-[3rem] border border-dashed border-slate-200">
+              <Megaphone size={48} className="mx-auto text-slate-300 mb-4" />
+              <p className="text-slate-500 font-black italic tracking-tight">Nenhuma campanha publicitária ativa no momento.</p>
+              <p className="text-slate-400 text-xs font-medium mt-1">Crie banners e destaques para aparecer na página inicial.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -504,12 +574,31 @@ const AdminDashboard: React.FC = () => {
               <p className="text-[10px] text-slate-400 font-medium">Verificar acessos administrativos</p>
             </button>
             <button 
-              onClick={() => handleUpdateSetting('maintenanceMode', !settings.maintenanceMode)}
-              className={`p-6 rounded-3xl border transition-all text-left group ${settings.maintenanceMode ? 'bg-rose-500 text-white border-rose-400' : 'bg-rose-500/10 border-rose-500/20'}`}
+              onClick={() => {
+                const action = settings.maintenanceMode ? 'DESATIVAR' : 'ATIVAR';
+                if (window.confirm(`Deseja realmente ${action} o Modo de Manutenção?`)) {
+                  handleUpdateSetting('maintenanceMode', !settings.maintenanceMode);
+                }
+              }}
+              className={`p-6 rounded-3xl border transition-all text-left group shadow-lg ${
+                settings.maintenanceMode 
+                  ? 'bg-rose-600 border-rose-400 text-white animate-pulse ring-4 ring-rose-500/20' 
+                  : 'bg-white/10 hover:bg-white/20 border-white/10'
+              }`}
             >
-              <h4 className={`font-black text-sm mb-1 ${settings.maintenanceMode ? 'text-white' : 'text-rose-400'}`}>Modo de Manutenção</h4>
-              <p className={`text-[10px] font-medium ${settings.maintenanceMode ? 'text-rose-100' : 'text-rose-300/60'}`}>
-                {settings.maintenanceMode ? 'Marketplace está OFFLINE' : 'Desativar marketplace temporariamente'}
+              <div className="flex items-center gap-3 mb-2">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${settings.maintenanceMode ? 'bg-white text-rose-600' : 'bg-rose-600 text-white'}`}>
+                  <Activity size={16} />
+                </div>
+                <h4 className={`font-black text-sm ${settings.maintenanceMode ? 'text-white' : 'text-rose-400'}`}>
+                  Modo de Manutenção
+                </h4>
+              </div>
+              <p className={`text-[10px] font-bold uppercase tracking-widest ${settings.maintenanceMode ? 'text-rose-200' : 'text-slate-400'}`}>
+                {settings.maintenanceMode ? 'SISTEMA OFFLINE' : 'SISTEMA ONLINE'}
+              </p>
+              <p className={`text-[9px] mt-2 leading-tight ${settings.maintenanceMode ? 'text-rose-100' : 'text-slate-500'}`}>
+                {settings.maintenanceMode ? 'Clique para normalizar o serviço' : 'Clique para suspender o acesso público'}
               </p>
             </button>
           </div>
@@ -684,8 +773,15 @@ const AdminDashboard: React.FC = () => {
                   }`}>
                     {pharm.planId || 'Básico'}
                   </span>
-                  <button onClick={() => showToast('Funcionalidade em desenvolvimento.', 'info')} className="p-2 text-slate-400 hover:text-teal-600 transition-colors">
-                    <ArrowUpRight size={18} />
+                  <button 
+                    onClick={() => {
+                      setModalType('pharmacy');
+                      setEditingItem(pharm);
+                      setIsModalOpen(true);
+                    }} 
+                    className="p-2 text-slate-400 hover:text-teal-600 transition-colors"
+                  >
+                    <EditIcon size={18} />
                   </button>
                 </div>
               </div>
@@ -939,20 +1035,69 @@ const AdminDashboard: React.FC = () => {
               </button>
             </div>
             
-            <form onSubmit={modalType === 'pharmacy' ? handleSavePharmacy : handleSaveMedication} className="p-10 space-y-6">
+            <form onSubmit={modalType === 'pharmacy' ? handleSavePharmacy : modalType === 'medication' ? handleSaveMedication : handleSaveAd} className="p-10 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Título / Nome</label>
                   <input 
                     required
-                    value={editingItem.name}
-                    onChange={e => setEditingItem({ ...editingItem, name: e.target.value })}
+                    value={editingItem.name || editingItem.title || ''}
+                    onChange={e => setEditingItem({ ...editingItem, name: e.target.value, title: e.target.value })}
                     className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 focus:ring-4 focus:ring-teal-500/10 placeholder:text-slate-300"
-                    placeholder="Ex: Paracetamol 500mg"
+                    placeholder="Ex: Campanha de Inverno"
                   />
                 </div>
 
-                {modalType === 'medication' ? (
+                {modalType === 'ad' && (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Subtítulo / Texto</label>
+                      <input 
+                        required
+                        value={editingItem.subtitle || ''}
+                        onChange={e => setEditingItem({ ...editingItem, subtitle: e.target.value })}
+                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 focus:ring-4 focus:ring-teal-500/10"
+                        placeholder="Ex: Entrega grátis hoje"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo</label>
+                      <select 
+                        required
+                        value={editingItem.type || 'banner'}
+                        onChange={e => setEditingItem({ ...editingItem, type: e.target.value })}
+                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 focus:ring-4 focus:ring-teal-500/10"
+                      >
+                        <option value="banner">Banner Principal</option>
+                        <option value="product_highlight">Destaque de Produto</option>
+                        <option value="sponsored_pharmacy">Farmácia Patrocinada</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Custo (MT)</label>
+                      <input 
+                        required
+                        type="number"
+                        value={editingItem.cost || 0}
+                        onChange={e => setEditingItem({ ...editingItem, cost: e.target.value })}
+                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 focus:ring-4 focus:ring-teal-500/10"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="checkbox"
+                          checked={editingItem.active !== false}
+                          onChange={e => setEditingItem({ ...editingItem, active: e.target.checked })}
+                          className="w-5 h-5 text-teal-600 rounded border-none bg-slate-100"
+                        />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Campanha Ativa</span>
+                      </label>
+                    </div>
+                  </>
+                )}
+
+                {modalType === 'medication' && (
                   <>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preço (MT)</label>
@@ -1005,7 +1150,9 @@ const AdminDashboard: React.FC = () => {
                       </select>
                     </div>
                   </>
-                ) : (
+                )}
+
+                {modalType === 'pharmacy' && (
                   <>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Telefone</label>

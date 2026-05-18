@@ -28,6 +28,7 @@ const Dashboard: React.FC = () => {
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [myPharmacy, setMyPharmacy] = useState<Pharmacy | null>(null);
   const [realNotifications, setRealNotifications] = useState<any[]>([]);
+  const [ads, setAds] = useState<any[]>([]);
 
   // Health Metrics State
   const [showHealthCalc, setShowHealthCalc] = useState(false);
@@ -189,12 +190,17 @@ const Dashboard: React.FC = () => {
       });
     }
 
+    const unsubAds = onSnapshot(query(collection(db, 'ads'), where('active', '==', true)), (snap) => {
+      setAds(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
     return () => {
       unsubscribePharmacies();
       unsubscribeMedications();
       unsubscribeOrder();
       unsubscribeMyPharmacy();
       unsubscribeNotifications();
+      unsubAds();
     };
   }, [user, profile]);
 
@@ -314,29 +320,55 @@ const Dashboard: React.FC = () => {
       </section>
 
       {/* NEW: Dynamic Banner Ads Section */}
-      <section className="relative h-48 md:h-64 rounded-[2.5rem] overflow-hidden shadow-xl group cursor-pointer" onClick={() => navigate('/app/search')}>
-        <img 
-          src="https://images.unsplash.com/photo-1587854692152-cbe660dbbb88?auto=format&fit=crop&q=80&w=2000" 
-          alt="Banner Ad" 
-          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-          referrerPolicy="no-referrer"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 to-transparent flex flex-col justify-center p-8 md:p-12">
-          <span className="text-teal-400 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Oferta Especial</span>
-          <h2 className="text-white text-3xl md:text-4xl font-black leading-tight max-w-md">
-            Cuide da sua <br /> <span className="text-teal-400 italic">Saúde Familiar</span>
-          </h2>
-          <p className="text-slate-300 text-sm md:text-base mt-4 max-w-sm hidden md:block">
-            Entrega grátis em Maputo para pedidos acima de 2.000 MT. Aproveite agora!
-          </p>
-          <div className="mt-6 flex items-center gap-4">
-            <button onClick={() => alert('Funcionalidade em desenvolvimento.')} className="bg-teal-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-teal-900/40">
-              Ver Ofertas
-            </button>
-            <span className="text-[10px] text-white/40 font-mono uppercase">Anúncio</span>
+      {ads.filter(a => a.type === 'banner').length > 0 ? (
+        <section className="relative h-48 md:h-64 rounded-[2.5rem] overflow-hidden shadow-xl group cursor-pointer" onClick={() => navigate('/app/search')}>
+          <img 
+            src={ads.find(a => a.type === 'banner')?.image} 
+            alt="Banner Ad" 
+            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 to-transparent flex flex-col justify-center p-8 md:p-12">
+            <span className="text-teal-400 text-[10px] font-black uppercase tracking-[0.3em] mb-2">{ads.find(a => a.type === 'banner')?.tag || 'Oferta Especial'}</span>
+            <h2 className="text-white text-3xl md:text-4xl font-black leading-tight max-w-md">
+              {ads.find(a => a.type === 'banner')?.title}
+            </h2>
+            <p className="text-slate-300 text-sm md:text-base mt-4 max-w-sm hidden md:block">
+              {ads.find(a => a.type === 'banner')?.subtitle}
+            </p>
+            <div className="mt-6 flex items-center gap-4">
+              <button onClick={(e) => { e.stopPropagation(); navigate(ads.find(a => a.type === 'banner')?.link || '/app/search'); }} className="bg-teal-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-teal-900/40">
+                Ver Ofertas
+              </button>
+              <span className="text-[10px] text-white/40 font-mono uppercase">Anúncio</span>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : (
+        <section className="relative h-48 md:h-64 rounded-[2.5rem] overflow-hidden shadow-xl group cursor-pointer" onClick={() => navigate('/app/search')}>
+          <img 
+            src="https://images.unsplash.com/photo-1587854692152-cbe660dbbb88?auto=format&fit=crop&q=80&w=2000" 
+            alt="Banner Ad" 
+            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 to-transparent flex flex-col justify-center p-8 md:p-12">
+            <span className="text-teal-400 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Oferta Especial</span>
+            <h2 className="text-white text-3xl md:text-4xl font-black leading-tight max-w-md">
+              Cuide da sua <br /> <span className="text-teal-400 italic">Saúde Familiar</span>
+            </h2>
+            <p className="text-slate-300 text-sm md:text-base mt-4 max-w-sm hidden md:block">
+              Entrega grátis em Maputo para pedidos acima de 2.000 MT. Aproveite agora!
+            </p>
+            <div className="mt-6 flex items-center gap-4">
+              <button onClick={() => navigate('/app/search')} className="bg-teal-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-teal-900/40">
+                Ver Ofertas
+              </button>
+              <span className="text-[10px] text-white/40 font-mono uppercase">Anúncio</span>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* NEW: My Pharmacy Section for Owners */}
       {profile?.role === 'pharmacy_owner' && (
